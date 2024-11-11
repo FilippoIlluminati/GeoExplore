@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mappa di Corridonia</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map { height: 100%; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+        var map = L.map('map').setView([43.2595, 13.4945], 14); // Corridonia
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Aggiungi i POI come marker sulla mappa
+        var poi1 = L.marker([43.2595, 13.4945]).addTo(map)
+            .bindPopup('POI 1: Centro Storico');
+        var poi2 = L.marker([43.2600, 13.4950]).addTo(map)
+            .bindPopup('POI 2: Monumento Storico');
+    </script>
+</body>
+</html>

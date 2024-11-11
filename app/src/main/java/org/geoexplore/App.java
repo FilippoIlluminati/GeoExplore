@@ -3,93 +3,127 @@ package org.geoexplore;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 
 public class App extends Application {
+
     private Stage primaryStage;
+    private String userType = "";
 
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
-        primaryStage.setTitle("GeoExplore");
+        primaryStage.setTitle("GeoExplore - Benvenuti");
 
-        // Mostra la schermata iniziale di selezione utente
         showUserSelectionScreen();
     }
 
     private void showUserSelectionScreen() {
-        // Layout per la schermata di selezione utente
-        VBox layout = new VBox(20); // 20px di spaziatura tra i pulsanti
+        // Layout per la selezione dell'utente
+        BorderPane selectionLayout = new BorderPane();
+        VBox centerLayout = new VBox(10);
+        centerLayout.setAlignment(Pos.CENTER); // Allinea al centro verticalmente
+        centerLayout.setStyle("-fx-padding: 20;");
 
-        // Messaggio di benvenuto
-        Label welcomeMessage = new Label("Benvenuti nella città di Corridonia!");
+        Label label = new Label("Seleziona il tipo di utente:");
 
-        // Pulsanti per selezione del tipo di utente
-        Button adminButton = new Button("Admin");
-        Button userButton = new Button("Utente");
-        Button visitorButton = new Button("Visitatore");
+        ToggleButton adminButton = new ToggleButton("Admin");
+        ToggleButton userButton = new ToggleButton("Utente");
+        ToggleButton visitorButton = new ToggleButton("Visitatore");
 
-        // Eventi per ciascun tipo di utente
-        adminButton.setOnAction(e -> showMainScreen("Admin"));
-        userButton.setOnAction(e -> showMainScreen("Utente"));
-        visitorButton.setOnAction(e -> showMainScreen("Visitatore"));
+        ToggleGroup toggleGroup = new ToggleGroup();
+        adminButton.setToggleGroup(toggleGroup);
+        userButton.setToggleGroup(toggleGroup);
+        visitorButton.setToggleGroup(toggleGroup);
 
-        layout.getChildren().addAll(welcomeMessage, adminButton, userButton, visitorButton);
-        layout.setAlignment(Pos.CENTER);
+        centerLayout.getChildren().addAll(label, adminButton, userButton, visitorButton);
 
-        Scene scene = new Scene(layout, 400, 300);
+        Button proceedButton = new Button("Procedi");
+        proceedButton.setOnAction(e -> {
+            if (adminButton.isSelected()) {
+                userType = "Admin";
+            } else if (userButton.isSelected()) {
+                userType = "Utente";
+            } else if (visitorButton.isSelected()) {
+                userType = "Visitatore";
+            }
+
+            if (!userType.isEmpty()) {
+                showMapScreen();
+            } else {
+                Alert alert = new Alert(AlertType.WARNING);
+                alert.setTitle("Attenzione");
+                alert.setHeaderText(null);
+                alert.setContentText("Seleziona un tipo di utente per procedere.");
+                alert.showAndWait();
+            }
+        });
+
+        selectionLayout.setCenter(centerLayout); // Imposta layout centrato
+        selectionLayout.setBottom(proceedButton); // Posiziona "Procedi" in basso
+
+        BorderPane.setAlignment(proceedButton, Pos.CENTER); // Allinea "Procedi" al centro
+        Scene scene = new Scene(selectionLayout, 300, 250);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
-    private void showMainScreen(String userType) {
+    private void showMapScreen() {
         // Layout principale
-        BorderPane layout = new BorderPane();
+        BorderPane mapLayout = new BorderPane();
 
-        // Messaggio di benvenuto
-        Label welcomeLabel = new Label("Benvenuti nella città di Corridonia!");
-        welcomeLabel.setStyle("-fx-font-size: 18px; -fx-padding: 10px;");
-        layout.setTop(welcomeLabel);
-        BorderPane.setAlignment(welcomeLabel, Pos.CENTER);
+        // Inizializza WebView per la mappa
+        WebView mapView = new WebView();
+        WebEngine webEngine = mapView.getEngine();
+        webEngine.load("https://www.openstreetmap.org/export/embed.html?bbox=13.5046%2C43.2480%2C13.5120%2C43.2520&layer=mapnik");
 
-        // Contenuto principale
-        VBox mainContent = new VBox(10);
-        mainContent.setAlignment(Pos.CENTER);
 
-        // Pulsante per mostrare i POI
-        Button showPoiButton = new Button("Mostra Punti di Interesse");
-        showPoiButton.setOnAction(e -> System.out.println("Punti di Interesse visualizzati per " + userType));
-        mainContent.getChildren().add(showPoiButton);
+        mapLayout.setCenter(mapView);
 
-        // Solo l'admin ha accesso al pulsante per aggiungere POI
-        if ("Admin".equals(userType)) {
-            Button addPoiButton = new Button("Aggiungi Punto di Interesse");
-            addPoiButton.setOnAction(e -> System.out.println("Punto di Interesse aggiunto da Admin"));
-            mainContent.getChildren().add(addPoiButton);
-        }
-
-        // Barra di navigazione inferiore sempre presente
-        HBox navigationBar = new HBox();
-        navigationBar.setAlignment(Pos.CENTER);
-        navigationBar.setStyle("-fx-background-color: #CCCCCC; -fx-padding: 10px;");
+        // Barra di navigazione inferiore
+        HBox navbar = new HBox(10);
+        navbar.setStyle("-fx-padding: 10; -fx-background-color: #dddddd;");
+        navbar.setAlignment(Pos.CENTER); // Allinea la navbar al centro
 
         Button homeButton = new Button("Torna alla Home");
         homeButton.setOnAction(e -> showUserSelectionScreen());
 
-        navigationBar.getChildren().add(homeButton);
+        navbar.getChildren().add(homeButton);
 
-        // Imposta il layout della scena
-        layout.setCenter(mainContent);
-        layout.setBottom(navigationBar);
+        // Pulsante per aggiungere POI (solo per Admin)
+        if ("Admin".equals(userType)) {
+            Button addPOIButton = new Button("Aggiungi Punto di Interesse");
+            addPOIButton.setOnAction(e -> addPointOfInterest());
+            navbar.getChildren().add(addPOIButton);
+        }
 
-        Scene scene = new Scene(layout, 400, 300);
-        primaryStage.setScene(scene);
+        mapLayout.setBottom(navbar);
+
+        // Imposta la scena
+        Scene mapScene = new Scene(mapLayout, 800, 600);
+        primaryStage.setScene(mapScene);
         primaryStage.show();
+    }
+
+    private void addPointOfInterest() {
+        // Logica per aggiungere un nuovo POI
+        System.out.println("Aggiunta di un nuovo Punto di Interesse...");
+        Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setTitle("Aggiungi POI");
+        alert.setHeaderText(null);
+        alert.setContentText("Funzionalità di aggiunta POI non ancora implementata.");
+        alert.showAndWait();
     }
 
     public static void main(String[] args) {
