@@ -7,6 +7,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.BorderPane;
@@ -16,10 +17,13 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 
+import java.util.Optional;
+
 public class App extends Application {
 
     private Stage primaryStage;
     private String userType = "";
+    private WebEngine webEngine;
 
     @Override
     public void start(Stage primaryStage) {
@@ -85,9 +89,27 @@ public class App extends Application {
 
         // Inizializza WebView per la mappa
         WebView mapView = new WebView();
-        WebEngine webEngine = mapView.getEngine();
-        webEngine.load("https://www.openstreetmap.org/export/embed.html?bbox=13.5046%2C43.2480%2C13.5120%2C43.2520&layer=mapnik");
+        webEngine = mapView.getEngine();
+        // Carica il file HTML che contiene la mappa con il GeoJSON
+        webEngine.load(getClass().getResource("/map.html").toExternalForm());
 
+        // Aggiungi JavaScript per limitare la visualizzazione della mappa a Corridonia
+        webEngine.documentProperty().addListener((obs, oldDoc, newDoc) -> {
+            if (newDoc != null) {
+                String script = """
+                    var map = L.map('map').setView([43.2595, 13.4945], 14);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+                    var bounds = [[43.243757, 13.504804], [43.253252, 13.519481]];
+                    map.setMaxBounds(bounds);
+                    map.on('drag', function() {
+                        map.panInsideBounds(bounds, { animate: true });
+                    });
+                """;
+                webEngine.executeScript(script);
+            }
+        });
 
         mapLayout.setCenter(mapView);
 
@@ -99,14 +121,10 @@ public class App extends Application {
         Button homeButton = new Button("Torna alla Home");
         homeButton.setOnAction(e -> showUserSelectionScreen());
 
-        navbar.getChildren().add(homeButton);
+        Button addPOIButton = new Button("Aggiungi POI");
+        addPOIButton.setOnAction(e -> addPointOfInterest());
 
-        // Pulsante per aggiungere POI (solo per Admin)
-        if ("Admin".equals(userType)) {
-            Button addPOIButton = new Button("Aggiungi Punto di Interesse");
-            addPOIButton.setOnAction(e -> addPointOfInterest());
-            navbar.getChildren().add(addPOIButton);
-        }
+        navbar.getChildren().addAll(homeButton, addPOIButton);
 
         mapLayout.setBottom(navbar);
 
@@ -117,13 +135,26 @@ public class App extends Application {
     }
 
     private void addPointOfInterest() {
-        // Logica per aggiungere un nuovo POI
-        System.out.println("Aggiunta di un nuovo Punto di Interesse...");
-        Alert alert = new Alert(AlertType.INFORMATION);
-        alert.setTitle("Aggiungi POI");
-        alert.setHeaderText(null);
-        alert.setContentText("Funzionalità di aggiunta POI non ancora implementata.");
-        alert.showAndWait();
+        // Richiedi il nome del POI all'utente tramite una finestra di dialogo
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Aggiungi POI");
+        dialog.setHeaderText("Inserisci il nome del Punto di Interesse");
+        dialog.setContentText("Nome:");
+
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(name -> {
+            // Esegui JavaScript per aggiungere un marker sulla mappa
+            String script = "map.off('click');" +
+                    "map.on('click', function(e) {" +
+                    "    var lat = e.latlng.lat;" +
+                    "    var lng = e.latlng.lng;" +
+                    "    if (!window.poiAdded) {" +
+                    "        L.marker([lat, lng]).addTo(map).bindPopup('" + name + "').openPopup();" +
+                    "        window.poiAdded = true;" +
+                    "    }" +
+                    "});";
+            webEngine.executeScript(script);
+        });
     }
 
     public static void main(String[] args) {
