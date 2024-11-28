@@ -1,4 +1,3 @@
-// src/main/java/org/geoexplore/models/poi/InfoPoint.java
 package org.geoexplore.models.poi;
 
 public abstract class InfoPoint {

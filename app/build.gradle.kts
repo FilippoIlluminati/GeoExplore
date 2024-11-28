@@ -19,6 +19,7 @@ dependencies {
     implementation("org.openjfx:javafx-controls:23.0.1")
     implementation("org.openjfx:javafx-fxml:23.0.1")
     implementation("org.openjfx:javafx-web:23.0.1")  // Aggiungi il modulo javafx-web
+    implementation("org.json:json:20210307") // Aggiungi questa linea
 }
 
 application {
