@@ -1,4 +1,4 @@
-package main.java.org.geoexplore.Journey;
+package org.geoexplore.Journey;
 
 public class Stop {
 }

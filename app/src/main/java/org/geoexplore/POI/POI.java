@@ -1,4 +1,4 @@
-package main.java.org.geoexplore.POI;
+package org.geoexplore.POI;
 
 public class POI {
 }

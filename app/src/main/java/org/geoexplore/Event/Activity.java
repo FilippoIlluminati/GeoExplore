@@ -1,4 +1,4 @@
-package main.java.org.geoexplore.Event;
+package org.geoexplore.Event;
 
 public class Activity {
 }

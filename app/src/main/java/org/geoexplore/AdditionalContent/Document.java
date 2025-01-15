@@ -1,4 +1,4 @@
-package main.java.org.geoexplore.AdditionalContent;
+package org.geoexplore.AdditionalContent;
 
 public class Document {
 }

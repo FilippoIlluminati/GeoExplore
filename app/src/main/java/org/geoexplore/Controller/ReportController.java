@@ -1,4 +1,4 @@
-package main.java.org.geoexplore.Controller;
+package org.geoexplore.Controller;
 
 public class ReportController {
 }
