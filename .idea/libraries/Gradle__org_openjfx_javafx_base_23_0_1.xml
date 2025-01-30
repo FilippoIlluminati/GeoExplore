@@ -5,6 +5,8 @@
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-base/23.0.1/b09ccc9d998ad8eb1fade4e100c3ff0835d018b5/javafx-base-23.0.1.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.openjfx/javafx-base/23.0.1/f899b7810889c4618d69d87bf0d41b7ee5d928df/javafx-base-23.0.1-sources.jar!/" />
+    </SOURCES>
   </library>
 </component>

@@ -5,6 +5,8 @@
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy/1.14.11/725602eb7c8c56b51b9c21f273f9df5c909d9e7d/byte-buddy-1.14.11.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy/1.14.11/67010508a95b30eff7fc6f8ffe16b6d03fc57b99/byte-buddy-1.14.11-sources.jar!/" />
+    </SOURCES>
   </library>
 </component>

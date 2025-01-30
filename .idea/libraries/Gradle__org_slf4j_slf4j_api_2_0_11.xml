@@ -5,6 +5,8 @@
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.11/ad96c3f8cf895e696dd35c2bc8e8ebe710be9e6d/slf4j-api-2.0.11.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.11/fca63d68dddb10e92909ef54de9f6657e24d33e1/slf4j-api-2.0.11-sources.jar!/" />
+    </SOURCES>
   </library>
 </component>

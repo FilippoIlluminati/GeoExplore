@@ -3,39 +3,52 @@ package Geoexplore.User;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "users") // Specifica il nome della tabella
 public class Users {
+
     @Id
-    String id;
-    String nome;
-    String cognome;
-    String email;
-    String username;
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment ID
+    private Long id;
+
+    @Column(nullable = false)
+    private String nome;
+
+    @Column(nullable = false)
+    private String cognome;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false, unique = true)
+    private String username;
+
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private UserRole ruolo;
 
-
-    public Users(String id, String nome, String cognome, String email, String username, UserRole ruolo) {
-        this.id = id;
+    // Costruttore con parametri
+    public Users(String nome, String cognome, String email, String username, UserRole ruolo) {
         this.nome = nome;
         this.cognome = cognome;
         this.email = email;
         this.username = username;
-        this.ruolo=ruolo;
+        this.ruolo = ruolo;
     }
 
+    // Costruttore vuoto richiesto da JPA
     public Users() {
-
     }
 
-    public String getId() {
+    // Getter e Setter
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getNome(){
+    public String getNome() {
         return nome;
     }
 
@@ -43,12 +56,12 @@ public class Users {
         this.nome = nome;
     }
 
-    public String getCognome(){
+    public String getCognome() {
         return cognome;
     }
 
-    public void setCognome(String cognome){
-        this.cognome=cognome;
+    public void setCognome(String cognome) {
+        this.cognome = cognome;
     }
 
     public String getEmail() {
@@ -67,7 +80,11 @@ public class Users {
         this.username = username;
     }
 
+    public UserRole getRuolo() {
+        return ruolo;
+    }
 
-
+    public void setRuolo(UserRole ruolo) {
+        this.ruolo = ruolo;
+    }
 }
-

@@ -1,12 +1,12 @@
 package Geoexplore.User;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
-@RestController
-@RequestMapping("/users")
+@Service
 public class UserManager {
 
     private final UserRepository userRepository;
@@ -16,18 +16,22 @@ public class UserManager {
         this.userRepository = userRepository;
     }
 
+    // Crea un nuovo utente
     public Users saveUser(Users user) {
         return userRepository.save(user);
     }
 
+    // Recupera tutti gli utenti
     public List<Users> getAllUsers() {
         return userRepository.findAll();
     }
 
-    public Users getUserById(Long id) {
-        return userRepository.findById(id).orElse(null);
+    // Recupera un utente per ID
+    public Optional<Users> getUserById(Long id) {
+        return userRepository.findById(id);
     }
 
+    // Elimina un utente
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
