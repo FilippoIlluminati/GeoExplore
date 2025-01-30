@@ -2,6 +2,7 @@ package Geoexplore.Journey;
 
 import Geoexplore.User.Users;
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "Journey")
@@ -20,6 +21,9 @@ public class Journey {
     @ManyToOne
     @JoinColumn(name = "creatorID", nullable = false)
     private Users creator;
+
+    @OneToMany(mappedBy = "journey", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Stop> stops;
 
     // Costruttore vuoto richiesto da JPA
     public Journey() {}
@@ -62,5 +66,13 @@ public class Journey {
 
     public void setCreator(Users creator) {
         this.creator = creator;
+    }
+
+    public List<Stop> getStops() {
+        return stops;
+    }
+
+    public void setStops(List<Stop> stops) {
+        this.stops = stops;
     }
 }

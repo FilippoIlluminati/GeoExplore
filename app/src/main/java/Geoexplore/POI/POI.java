@@ -13,7 +13,7 @@ public class POI {
     @Column(nullable = false)
     private String nome;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String descrizione;
 
     @Column(nullable = false)

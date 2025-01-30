@@ -1,6 +1,8 @@
 package Geoexplore.Event;
 
+import Geoexplore.User.Users;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "Event")
@@ -17,7 +19,7 @@ public class Event {
     private String descrizione;
 
     @Column(nullable = false)
-    private String data;
+    private LocalDate data;
 
     @Column(nullable = false)
     private String luogo;
@@ -25,16 +27,21 @@ public class Event {
     @Column(nullable = false)
     private String categoria;
 
+    @ManyToOne
+    @JoinColumn(name = "organizzatoreID", nullable = false)
+    private Users organizzatore;
+
     // Costruttore vuoto richiesto da JPA
     public Event() {}
 
     // Costruttore con parametri
-    public Event(String nome, String descrizione, String data, String luogo, String categoria) {
+    public Event(String nome, String descrizione, LocalDate data, String luogo, String categoria, Users organizzatore) {
         this.nome = nome;
         this.descrizione = descrizione;
         this.data = data;
         this.luogo = luogo;
         this.categoria = categoria;
+        this.organizzatore = organizzatore;
     }
 
     // Getter e Setter
@@ -62,11 +69,11 @@ public class Event {
         this.descrizione = descrizione;
     }
 
-    public String getData() {
+    public LocalDate getData() {
         return data;
     }
 
-    public void setData(String data) {
+    public void setData(LocalDate data) {
         this.data = data;
     }
 
@@ -84,5 +91,13 @@ public class Event {
 
     public void setCategoria(String categoria) {
         this.categoria = categoria;
+    }
+
+    public Users getOrganizzatore() {
+        return organizzatore;
+    }
+
+    public void setOrganizzatore(Users organizzatore) {
+        this.organizzatore = organizzatore;
     }
 }

@@ -2,7 +2,6 @@ package Geoexplore.Contest;
 
 import Geoexplore.User.Users;
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 
 @Entity

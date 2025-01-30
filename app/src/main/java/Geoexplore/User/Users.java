@@ -1,6 +1,15 @@
 package Geoexplore.User;
 
 import jakarta.persistence.*;
+import Geoexplore.Journey.Journey;
+import Geoexplore.Content.Content;
+import Geoexplore.Notification.Notification;
+import Geoexplore.Contest.Contest;
+import Geoexplore.Event.Event;
+import Geoexplore.Report.Report;
+import java.util.List;
+
+
 
 @Entity
 @Table(name = "users") // Specifica il nome della tabella
@@ -25,6 +34,24 @@ public class Users {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole ruolo;
+
+    @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Journey> journeys;
+
+    @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Content> contents;
+
+    @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notification> notifications;
+
+    @OneToMany(mappedBy = "organizzatore", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Contest> contests;
+
+    @OneToMany(mappedBy = "organizzatore", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Event> events;
+
+    @OneToMany(mappedBy = "reporter", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Report> reports;
 
     // Costruttore con parametri
     public Users(String nome, String cognome, String email, String username, UserRole ruolo) {

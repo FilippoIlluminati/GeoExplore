@@ -18,14 +18,15 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String testo;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String stato; // Es. letto/non letto
+    private NotificationStatus stato; // Enum per gestione stato
 
     // Costruttore vuoto richiesto da JPA
     public Notification() {}
 
     // Costruttore con parametri
-    public Notification(Users utente, String testo, String stato) {
+    public Notification(Users utente, String testo, NotificationStatus stato) {
         this.utente = utente;
         this.testo = testo;
         this.stato = stato;
@@ -56,11 +57,11 @@ public class Notification {
         this.testo = testo;
     }
 
-    public String getStato() {
+    public NotificationStatus getStato() {
         return stato;
     }
 
-    public void setStato(String stato) {
+    public void setStato(NotificationStatus stato) {
         this.stato = stato;
     }
 }

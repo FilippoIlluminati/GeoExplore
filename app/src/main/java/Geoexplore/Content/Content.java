@@ -1,6 +1,6 @@
 package Geoexplore.Content;
 
-import Geoexplore.POI.POI;
+import Geoexplore.Journey.Stop;
 import Geoexplore.User.Users;
 import jakarta.persistence.*;
 
@@ -26,7 +26,7 @@ public class Content {
 
     @ManyToOne
     @JoinColumn(name = "stopID", nullable = false)
-    private POI stop;
+    private Stop stop;
 
     @Column(nullable = false)
     private Boolean approved = false;
@@ -39,7 +39,7 @@ public class Content {
     public Content() {}
 
     // Costruttore con parametri
-    public Content(String tipo, String titolo, String testo, String mediaPath, POI stop, Users creator) {
+    public Content(String tipo, String titolo, String testo, String mediaPath, Stop stop, Users creator) {
         this.tipo = tipo;
         this.titolo = titolo;
         this.testo = testo;
@@ -89,11 +89,11 @@ public class Content {
         this.mediaPath = mediaPath;
     }
 
-    public POI getStop() {
+    public Stop getStop() {
         return stop;
     }
 
-    public void setStop(POI stop) {
+    public void setStop(Stop stop) {
         this.stop = stop;
     }
 
