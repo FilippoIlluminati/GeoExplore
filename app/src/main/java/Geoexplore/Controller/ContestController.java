@@ -5,6 +5,9 @@ import Geoexplore.Contest.ContestManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import Geoexplore.Contest.ContestService; // <---- Importa ContestService
+import Geoexplore.Contest.ContestStatus;
+
 
 import java.util.List;
 import java.util.Optional;
@@ -14,11 +17,14 @@ import java.util.Optional;
 public class ContestController {
 
     private final ContestManager contestManager;
+    private final ContestService contestService;
 
     @Autowired
-    public ContestController(ContestManager contestManager) {
+    public ContestController(ContestManager contestManager, ContestService contestService) {
         this.contestManager = contestManager;
+        this.contestService = contestService;
     }
+
 
     // Crea un nuovo Contest
     @PostMapping
@@ -52,4 +58,10 @@ public class ContestController {
             return ResponseEntity.notFound().build(); // 404 Not Found
         }
     }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Contest> updateContestStatus(@PathVariable Long id, @RequestBody ContestStatus newStatus) {
+        return ResponseEntity.ok(contestService.updateContestStatus(id, newStatus));
+    }
 }
+

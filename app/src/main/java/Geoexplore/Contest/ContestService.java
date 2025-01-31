@@ -31,11 +31,20 @@ public class ContestService {
         return contestRepository.findById(id).map(contest -> {
             contest.setTitolo(contestDetails.getTitolo());
             contest.setDescrizione(contestDetails.getDescrizione());
-            contest.setDataInizio(contestDetails.getDataInizio());
-            contest.setDataFine(contestDetails.getDataFine());
-            contest.setOrganizzatore(contestDetails.getOrganizzatore());
+            contest.setStatus(contestDetails.getStatus()); // Aggiorna lo stato
+            contest.setDataInizio(contestDetails.getDataInizio()); // Mantiene la logica esistente
+            contest.setDataFine(contestDetails.getDataFine()); // Mantiene la logica esistente
+            contest.setOrganizzatore(contestDetails.getOrganizzatore()); // Aggiunto organizzatore
             return contestRepository.save(contest);
         }).orElseThrow(() -> new RuntimeException("Contest not found"));
+    }
+
+    // Aggiorna solo lo stato del contest
+    public Contest updateContestStatus(Long id, ContestStatus newStatus) {
+        return contestRepository.findById(id).map(contest -> {
+            contest.setStatus(newStatus);
+            return contestRepository.save(contest);
+        }).orElseThrow(() -> new RuntimeException("Contest non trovato"));
     }
 
     // Elimina un contest

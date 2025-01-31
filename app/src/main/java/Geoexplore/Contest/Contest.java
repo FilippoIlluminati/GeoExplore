@@ -28,6 +28,9 @@ public class Contest {
     @JoinColumn(name = "organizzatoreID", nullable = false)
     private Users organizzatore;
 
+    @Column(nullable = false)
+    private ContestStatus status;
+
     // Costruttore vuoto richiesto da JPA
     public Contest() {}
 
@@ -88,4 +91,7 @@ public class Contest {
     public void setOrganizzatore(Users organizzatore) {
         this.organizzatore = organizzatore;
     }
+
+    public ContestStatus getStatus() { return status; }
+    public void setStatus(ContestStatus status) { this.status = status; }
 }
