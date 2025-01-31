@@ -9,8 +9,6 @@ import Geoexplore.Event.Event;
 import Geoexplore.Report.Report;
 import java.util.List;
 
-
-
 @Entity
 @Table(name = "users") // Specifica il nome della tabella
 public class Users {
@@ -30,6 +28,9 @@ public class Users {
 
     @Column(nullable = false, unique = true)
     private String username;
+
+    @Column(nullable = false) // Campo per la password
+    private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -54,11 +55,12 @@ public class Users {
     private List<Report> reports;
 
     // Costruttore con parametri
-    public Users(String nome, String cognome, String email, String username, UserRole ruolo) {
+    public Users(String nome, String cognome, String email, String username, String password, UserRole ruolo) {
         this.nome = nome;
         this.cognome = cognome;
         this.email = email;
         this.username = username;
+        this.password = password;
         this.ruolo = ruolo;
     }
 
@@ -105,6 +107,14 @@ public class Users {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getPassword() {
+        return password; // Getter per la password
+    }
+
+    public void setPassword(String password) {
+        this.password = password; // Setter per la password
     }
 
     public UserRole getRuolo() {
