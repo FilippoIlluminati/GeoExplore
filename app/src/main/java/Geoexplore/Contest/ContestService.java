@@ -39,12 +39,11 @@ public class ContestService {
         }).orElseThrow(() -> new RuntimeException("Contest not found"));
     }
 
-    // Aggiorna solo lo stato del contest
     public Contest updateContestStatus(Long id, ContestStatus newStatus) {
         return contestRepository.findById(id).map(contest -> {
             contest.setStatus(newStatus);
             return contestRepository.save(contest);
-        }).orElseThrow(() -> new RuntimeException("Contest non trovato"));
+        }).orElseThrow(() -> new RuntimeException("Contest non trovato con ID: " + id));
     }
 
     // Elimina un contest

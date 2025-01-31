@@ -28,16 +28,19 @@ public class Contest {
     @JoinColumn(name = "organizzatoreID", nullable = false)
     private Users organizzatore;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ContestStatus status;
+
 
     // Costruttore vuoto richiesto da JPA
     public Contest() {}
 
     // Costruttore con parametri
-    public Contest(String titolo, String descrizione, LocalDate dataInizio, LocalDate dataFine, Users organizzatore) {
+    public Contest(String titolo, String descrizione, LocalDate dataInizio, LocalDate dataFine, Users organizzatore, ContestStatus status) {
         this.titolo = titolo;
         this.descrizione = descrizione;
+        this.status = status;
         this.dataInizio = dataInizio;
         this.dataFine = dataFine;
         this.organizzatore = organizzatore;

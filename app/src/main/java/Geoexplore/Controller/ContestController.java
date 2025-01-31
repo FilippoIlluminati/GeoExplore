@@ -3,10 +3,12 @@ package Geoexplore.Controller;
 import Geoexplore.Contest.Contest;
 import Geoexplore.Contest.ContestManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import Geoexplore.Contest.ContestService; // <---- Importa ContestService
+import Geoexplore.Contest.ContestService;
 import Geoexplore.Contest.ContestStatus;
+import java.util.Map; 
 
 
 import java.util.List;
@@ -60,8 +62,25 @@ public class ContestController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Contest> updateContestStatus(@PathVariable Long id, @RequestBody ContestStatus newStatus) {
-        return ResponseEntity.ok(contestService.updateContestStatus(id, newStatus));
+    public ResponseEntity<?> updateContestStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            // Legge il valore dallo JSON
+            String newStatus = body.get("status");
+
+            // Converte la stringa in enum ContestStatus
+            ContestStatus status = ContestStatus.valueOf(newStatus.trim().toUpperCase());
+
+            // Aggiorna lo stato del contest
+            Contest updatedContest = contestService.updateContestStatus(id, status);
+            return ResponseEntity.ok(updatedContest);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Errore: Status non valido. Usa: APERTO, CHIUSO, IN_REVISIONE");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore interno del server.");
+        }
     }
+
+
+
 }
 
