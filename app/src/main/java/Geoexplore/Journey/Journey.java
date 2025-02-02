@@ -1,6 +1,7 @@
 package Geoexplore.Journey;
 
 import Geoexplore.User.Users;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -23,25 +24,27 @@ public class Journey {
     private Users creator;
 
     @OneToMany(mappedBy = "journey", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Stop> stops;
 
+    // Indica se il journey è stato confermato
+    private boolean confermato = false;
+
     // Costruttore vuoto richiesto da JPA
-    public Journey() {}
+    public Journey() {
+    }
 
     // Costruttore con parametri
     public Journey(String nome, String descrizione, Users creator) {
         this.nome = nome;
         this.descrizione = descrizione;
         this.creator = creator;
+        this.confermato = false;
     }
 
-    // Getter e Setter
+    // Getters e Setters
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getNome() {
@@ -74,5 +77,13 @@ public class Journey {
 
     public void setStops(List<Stop> stops) {
         this.stops = stops;
+    }
+
+    public boolean isConfermato() {
+        return confermato;
+    }
+
+    public void setConfermato(boolean confermato) {
+        this.confermato = confermato;
     }
 }

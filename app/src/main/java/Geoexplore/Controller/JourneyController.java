@@ -5,7 +5,6 @@ import Geoexplore.Journey.JourneyManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -42,6 +41,17 @@ public class JourneyController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Aggiorna un Journey esistente
+    @PutMapping("/{id}")
+    public ResponseEntity<Journey> updateJourney(@PathVariable Long id, @RequestBody Journey journeyDetails) {
+        try {
+            Journey updatedJourney = journeyManager.updateJourney(id, journeyDetails);
+            return ResponseEntity.ok(updatedJourney);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     // Elimina un Journey per ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteJourney(@PathVariable Long id) {
@@ -50,6 +60,17 @@ public class JourneyController {
             return ResponseEntity.noContent().build(); // 204 No Content
         } else {
             return ResponseEntity.notFound().build(); // 404 Not Found
+        }
+    }
+
+    // Endpoint per confermare un Journey
+    @PutMapping("/{id}/confirm")
+    public ResponseEntity<Journey> confirmJourney(@PathVariable Long id) {
+        try {
+            Journey confirmedJourney = journeyManager.confirmJourney(id);
+            return ResponseEntity.ok(confirmedJourney);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 }
