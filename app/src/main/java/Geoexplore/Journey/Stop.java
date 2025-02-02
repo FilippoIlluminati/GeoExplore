@@ -1,7 +1,7 @@
 package Geoexplore.Journey;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import Geoexplore.Content.Content;
 import Geoexplore.Report.Report;
 import java.util.List;
 
@@ -27,10 +27,10 @@ public class Stop {
 
     @ManyToOne
     @JoinColumn(name = "journeyID", nullable = false)
+    @JsonBackReference
     private Journey journey;
 
-    @OneToMany(mappedBy = "stop", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Content> contents;
+
 
     @OneToMany(mappedBy = "stop", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Report> reports;
@@ -96,13 +96,7 @@ public class Stop {
         this.journey = journey;
     }
 
-    public List<Content> getContents() {
-        return contents;
-    }
 
-    public void setContents(List<Content> contents) {
-        this.contents = contents;
-    }
 
     public List<Report> getReports() {
         return reports;

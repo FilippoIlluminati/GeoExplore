@@ -1,6 +1,7 @@
 package Geoexplore.Journey;
 
 import Geoexplore.User.Users;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.util.List;
@@ -21,7 +22,9 @@ public class Journey {
 
     @ManyToOne
     @JoinColumn(name = "creatorID", nullable = false)
+    @JsonIgnoreProperties("journeys")
     private Users creator;
+
 
     @OneToMany(mappedBy = "journey", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
