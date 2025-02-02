@@ -1,5 +1,6 @@
 package Geoexplore.User;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import Geoexplore.Journey.Journey;
@@ -54,6 +55,7 @@ public class Users {
     @OneToMany(mappedBy = "organizzatore", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Event> events;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "reporter", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Report> reports;
 

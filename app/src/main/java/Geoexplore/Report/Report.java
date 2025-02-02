@@ -1,6 +1,6 @@
 package Geoexplore.Report;
 
-import Geoexplore.Journey.Stop;
+import Geoexplore.POI.POI;
 import Geoexplore.User.Users;
 import jakarta.persistence.*;
 
@@ -18,9 +18,10 @@ public class Report {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String descrizione;
 
+    // Sostituisci la relazione con Stop con quella con POI
     @ManyToOne
-    @JoinColumn(name = "stopID", nullable = false)
-    private Stop stop;
+    @JoinColumn(name = "poiID", nullable = false)
+    private POI poi;
 
     @ManyToOne
     @JoinColumn(name = "reporterID", nullable = false)
@@ -30,14 +31,15 @@ public class Report {
     public Report() {}
 
     // Costruttore con parametri
-    public Report(String tipo, String descrizione, Stop stop, Users reporter) {
+    public Report(String tipo, String descrizione, POI poi, Users reporter) {
         this.tipo = tipo;
         this.descrizione = descrizione;
-        this.stop = stop;
+        this.poi = poi;
         this.reporter = reporter;
     }
 
-    // Getter e Setter
+    // Getters & Setters
+
     public Long getId() {
         return id;
     }
@@ -62,12 +64,12 @@ public class Report {
         this.descrizione = descrizione;
     }
 
-    public Stop getStop() {
-        return stop;
+    public POI getPoi() {
+        return poi;
     }
 
-    public void setStop(Stop stop) {
-        this.stop = stop;
+    public void setPoi(POI poi) {
+        this.poi = poi;
     }
 
     public Users getReporter() {
@@ -78,3 +80,4 @@ public class Report {
         this.reporter = reporter;
     }
 }
+

@@ -47,9 +47,9 @@ public class ReportController {
     public ResponseEntity<Void> deleteReport(@PathVariable Long id) {
         if (reportManager.getReportById(id).isPresent()) {
             reportManager.deleteReport(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
+            return ResponseEntity.noContent().build();
         } else {
-            return ResponseEntity.notFound().build(); // 404 Not Found
+            return ResponseEntity.notFound().build();
         }
     }
 }

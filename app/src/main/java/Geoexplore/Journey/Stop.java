@@ -32,8 +32,8 @@ public class Stop {
 
 
 
-    @OneToMany(mappedBy = "stop", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Report> reports;
+//    @OneToMany(mappedBy = "stop", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Report> reports;
 
     // Costruttore vuoto richiesto da JPA
     public Stop() {}
@@ -98,11 +98,11 @@ public class Stop {
 
 
 
-    public List<Report> getReports() {
-        return reports;
-    }
-
-    public void setReports(List<Report> reports) {
-        this.reports = reports;
-    }
+//    public List<Report> getReports() {
+//        return reports;
+//    }
+//
+//    public void setReports(List<Report> reports) {
+//        this.reports = reports;
+//    }
 }
