@@ -1,34 +1,52 @@
 package Geoexplore.POI;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
-@Service
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import Geoexplore.User.UserRole;
+import Geoexplore.User.Users;
+
+@Component
 public class POIManager {
 
-    private final POIRepository poiRepository;
-
     @Autowired
-    public POIManager(POIRepository poiRepository) {
-        this.poiRepository = poiRepository;
-    }
+    private POIService poiService;
 
-    public POI savePOI(POI poi) {
-        return poiRepository.save(poi);
-    }
-
+    // Recupera tutti i POI
     public List<POI> getAllPOIs() {
-        return poiRepository.findAll();
+        return poiService.getAllPOIs();
     }
 
+    // Recupera un POI specifico tramite ID
     public Optional<POI> getPOIById(Long id) {
-        return poiRepository.findById(id);
+        return poiService.getPOIById(id);
     }
 
-    public void deletePOI(Long id) {
-        poiRepository.deleteById(id);
+    // Aggiunge un nuovo POI con gestione permessi
+    public POI addPOI(POI poi, Long userId) {
+        return poiService.addPOI(poi, userId);
+    }
+
+    // Aggiorna un POI esistente con controllo permessi
+    public POI updatePOI(Long id, POI poi, Long userId) {
+        return poiService.updatePOI(id, poi, userId);
+    }
+
+    // Elimina un POI con controllo permessi
+    public void deletePOI(Long id, Long userId) {
+        poiService.deletePOI(id, userId);
+    }
+
+    // Recupera POI non approvati
+    public List<POI> getUnapprovedPOIs() {
+        return poiService.getUnapprovedPOIs();
+    }
+
+    // Approva un POI con controllo permessi
+    public POI approvePOI(Long id, Long userId) {
+        return poiService.approvePOI(id, userId);
     }
 }

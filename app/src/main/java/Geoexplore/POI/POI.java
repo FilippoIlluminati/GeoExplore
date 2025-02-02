@@ -1,76 +1,57 @@
 package Geoexplore.POI;
 
+import Geoexplore.User.Users;
 import jakarta.persistence.*;
 
+
 @Entity
-@Table(name = "POI")
 public class POI {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String nome;
+    private String name;
+    private String description;
+    private double latitude;
+    private double longitude;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String descrizione;
+    @Enumerated(EnumType.STRING)
+    private Category category;
 
-    @Column(nullable = false)
-    private String categoria;
+    @ManyToOne
+    private Users owner;
 
-    @Column(nullable = false)
-    private String coordinate;
+    private boolean approved;
 
-    // Costruttore vuoto richiesto da JPA
+    // Costruttori
     public POI() {}
 
-    // Costruttore con parametri
-    public POI(String nome, String descrizione, String categoria, String coordinate) {
-        this.nome = nome;
-        this.descrizione = descrizione;
-        this.categoria = categoria;
-        this.coordinate = coordinate;
+    public POI(String name, String description, double latitude, double longitude, Category category, Users owner) {
+        this.name = name;
+        this.description = description;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.category = category;
+        this.owner = owner;
+        this.approved = false; // Default a non approvato
     }
 
     // Getter e Setter
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNome() {
-        return nome;
-    }
-
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public String getDescrizione() {
-        return descrizione;
-    }
-
-    public void setDescrizione(String descrizione) {
-        this.descrizione = descrizione;
-    }
-
-    public String getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(String categoria) {
-        this.categoria = categoria;
-    }
-
-    public String getCoordinate() {
-        return coordinate;
-    }
-
-    public void setCoordinate(String coordinate) {
-        this.coordinate = coordinate;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
+    public Category getCategory() { return category; }
+    public void setCategory(Category category) { this.category = category; }
+    public Users getOwner() { return owner; }
+    public void setOwner(Users owner) { this.owner = owner; }
+    public boolean isApproved() { return approved; }
+    public void setApproved(boolean approved) { this.approved = approved; }
 }

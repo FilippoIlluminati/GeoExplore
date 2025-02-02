@@ -1,11 +1,13 @@
 package Geoexplore.Controller;
 
 import Geoexplore.POI.POI;
-import Geoexplore.POI.POIManager;
+import Geoexplore.POI.POIService;
+import Geoexplore.User.Users;
+import Geoexplore.User.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,43 +15,59 @@ import java.util.Optional;
 @RequestMapping("/poi")
 public class POIController {
 
-    private final POIManager poiManager;
+    private final POIService poiService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public POIController(POIManager poiManager) {
-        this.poiManager = poiManager;
+    public POIController(POIService poiService, UserRepository userRepository) {
+        this.poiService = poiService;
+        this.userRepository = userRepository;
     }
 
-    // Crea un nuovo POI
-    @PostMapping
-    public ResponseEntity<POI> createPOI(@RequestBody POI poi) {
-        POI savedPOI = poiManager.savePOI(poi);
-        return ResponseEntity.ok(savedPOI);
-    }
-
-    // Recupera tutti i POI
     @GetMapping
-    public ResponseEntity<List<POI>> getAllPOIs() {
-        List<POI> pois = poiManager.getAllPOIs();
-        return ResponseEntity.ok(pois);
+    public List<POI> getAllPOIs() {
+        return poiService.getAllPOIs();
     }
 
-    // Recupera un POI per ID
     @GetMapping("/{id}")
-    public ResponseEntity<POI> getPOIById(@PathVariable Long id) {
-        Optional<POI> poi = poiManager.getPOIById(id);
-        return poi.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public Optional<POI> getPOIById(@PathVariable Long id) {
+        return poiService.getPOIById(id);
     }
 
-    // Elimina un POI per ID
+    @PostMapping
+    public POI addPOI(@RequestBody POI poi, Principal principal) {
+        Long userId = getUserFromPrincipal(principal).getId();
+        return poiService.addPOI(poi, userId);
+    }
+
+    @PutMapping("/{id}")
+    public POI updatePOI(@PathVariable Long id, @RequestBody POI poi, Principal principal) {
+        Long userId = getUserFromPrincipal(principal).getId();
+        return poiService.updatePOI(id, poi, userId);
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePOI(@PathVariable Long id) {
-        if (poiManager.getPOIById(id).isPresent()) {
-            poiManager.deletePOI(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } else {
-            return ResponseEntity.notFound().build(); // 404 Not Found
+    public void deletePOI(@PathVariable Long id, Principal principal) {
+        Long userId = getUserFromPrincipal(principal).getId();
+        poiService.deletePOI(id, userId);
+    }
+
+    @GetMapping("/unapproved")
+    public List<POI> getUnapprovedPOIs() {
+        return poiService.getUnapprovedPOIs();
+    }
+
+    @PutMapping("/approve/{id}")
+    public POI approvePOI(@PathVariable Long id, Principal principal) {
+        Long userId = getUserFromPrincipal(principal).getId();
+        return poiService.approvePOI(id, userId);
+    }
+
+    private Users getUserFromPrincipal(Principal principal) {
+        Users user = userRepository.findByUsername(principal.getName());
+        if (user == null) {
+            throw new RuntimeException("User not found");
         }
+        return user;
     }
 }

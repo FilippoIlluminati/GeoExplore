@@ -1,9 +1,14 @@
 package Geoexplore.POI;
 
+import Geoexplore.User.UserRepository;
+import Geoexplore.User.UserRole;
+import Geoexplore.User.Users;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 import java.util.Optional;
+
+
 
 @Service
 public class POIService {
@@ -11,34 +16,70 @@ public class POIService {
     @Autowired
     private POIRepository poiRepository;
 
-    // Ottiene tutti i punti di interesse
+    @Autowired
+    private UserRepository userRepository;
+
     public List<POI> getAllPOIs() {
         return poiRepository.findAll();
     }
 
-    // Trova un punto di interesse per ID
     public Optional<POI> getPOIById(Long id) {
         return poiRepository.findById(id);
     }
 
-    // Salva un nuovo punto di interesse
-    public POI createPOI(POI poi) {
+    public POI addPOI(POI poi, Long userId) {
+        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        poi.setOwner(user);
+        if (user.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO) {
+            poi.setApproved(true);
+        } else {
+            poi.setApproved(false);
+        }
         return poiRepository.save(poi);
     }
 
-    // Aggiorna un punto di interesse esistente
-    public POI updatePOI(Long id, POI poiDetails) {
+    public POI updatePOI(Long id, POI updatedPOI, Long userId) {
+        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         return poiRepository.findById(id).map(poi -> {
-            poi.setNome(poiDetails.getNome());
-            poi.setDescrizione(poiDetails.getDescrizione());
-            poi.setCategoria(poiDetails.getCategoria());
-            poi.setCoordinate(poiDetails.getCoordinate());
-            return poiRepository.save(poi);
+            if (poi.getOwner().equals(user) || user.getRuolo() == UserRole.CURATORE || user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
+                poi.setName(updatedPOI.getName());
+                poi.setDescription(updatedPOI.getDescription());
+                poi.setLatitude(updatedPOI.getLatitude());
+                poi.setLongitude(updatedPOI.getLongitude());
+                poi.setCategory(updatedPOI.getCategory());
+                return poiRepository.save(poi);
+            } else {
+                throw new SecurityException("Permessi insufficienti per modificare questo POI");
+            }
         }).orElseThrow(() -> new RuntimeException("POI not found"));
     }
 
-    // Elimina un punto di interesse
-    public void deletePOI(Long id) {
-        poiRepository.deleteById(id);
+    public void deletePOI(Long id, Long userId) {
+        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        poiRepository.findById(id).ifPresentOrElse(poi -> {
+            if (poi.getOwner().equals(user) || user.getRuolo() == UserRole.CURATORE || user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
+                poiRepository.deleteById(id);
+            } else {
+                throw new SecurityException("Permessi insufficienti per eliminare questo POI");
+            }
+        }, () -> {
+            throw new RuntimeException("POI not found");
+        });
+    }
+
+    public List<POI> getUnapprovedPOIs() {
+        return poiRepository.findByApproved(false);
+    }
+
+    public POI approvePOI(Long id, Long userId) {
+        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getRuolo() == UserRole.CURATORE || user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
+            return poiRepository.findById(id).map(poi -> {
+                poi.setApproved(true);
+                return poiRepository.save(poi);
+            }).orElseThrow(() -> new RuntimeException("POI not found"));
+        } else {
+            throw new SecurityException("Permessi insufficienti per approvare POI");
+        }
     }
 }
