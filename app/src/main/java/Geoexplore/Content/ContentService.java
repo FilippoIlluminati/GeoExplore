@@ -1,10 +1,9 @@
 package Geoexplore.Content;
 
-import Geoexplore.User.Users;
 import Geoexplore.User.UserRepository;
+import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -15,45 +14,49 @@ public class ContentService {
     private ContentRepository contentRepository;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private ApprovalRepository approvalRepository;
 
-    // Ottiene tutti i contenuti
+    @Autowired
+    private UserRepository userRepository;
+
+    // Recupera tutti i contenuti
     public List<Content> getAllContents() {
         return contentRepository.findAll();
     }
 
-    // Ottiene solo i contenuti approvati
+    // Recupera i contenuti approvati (cioè che hanno un'Approval con isApproved true)
     public List<Content> getApprovedContents() {
-        return contentRepository.findByApprovalIsNotNull();
+        return contentRepository.findAll().stream()
+                .filter(c -> c.getApproval() != null && Boolean.TRUE.equals(c.getApproval().getIsApproved()))
+                .toList();
     }
 
-    // Ottiene solo i contenuti in attesa di approvazione
+    // Recupera i contenuti in attesa di approvazione
     public List<Content> getPendingContents() {
-        return contentRepository.findByApprovalIsNull();
+        return contentRepository.findAll().stream()
+                .filter(c -> c.getApproval() == null || !Boolean.TRUE.equals(c.getApproval().getIsApproved()))
+                .toList();
     }
 
-    // Trova un contenuto per ID
+    // Recupera un contenuto per ID
     public Optional<Content> getContentById(Long id) {
         return contentRepository.findById(id);
     }
 
-    // Salva un nuovo contenuto
+    // Crea un nuovo contenuto (inizialmente senza approvazione)
     public Content createContent(Content content) {
+        content.setApproval(null);
         return contentRepository.save(content);
     }
 
     // Aggiorna un contenuto esistente
     public Content updateContent(Long id, Content contentDetails) {
         return contentRepository.findById(id).map(content -> {
-            content.setTipo(contentDetails.getTipo());
             content.setTitolo(contentDetails.getTitolo());
-            content.setTesto(contentDetails.getTesto());
-            content.setMediaPath(contentDetails.getMediaPath());
-            content.setStop(contentDetails.getStop());
+            content.setDescrizione(contentDetails.getDescrizione());
+            content.setPoi(contentDetails.getPoi());
             content.setCreator(contentDetails.getCreator());
+            content.setContentType((content.getPoi() != null) ? ContentType.POI : ContentType.GENERIC);
             return contentRepository.save(content);
         }).orElseThrow(() -> new RuntimeException("Content not found"));
     }
@@ -63,7 +66,7 @@ public class ContentService {
         contentRepository.deleteById(id);
     }
 
-    // **NUOVO METODO: Approva un contenuto**
+    // Approva un contenuto: l'utente approvatore deve avere i permessi (VALIDATE_CONTENT o MANAGE_CONTENT)
     public Content approveContent(Long contentId, Long approverId) {
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new RuntimeException("Content not found"));
@@ -71,17 +74,21 @@ public class ContentService {
         Users approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
 
-        // Verifica se l'utente ha il permesso di approvare contenuti
-        if (!approver.getRuolo().equals("CURATORE") && !approver.getRuolo().equals("GESTORE_PIATTAFORMA")) {
+        // Verifica se l'utente ha il permesso di validare i contenuti
+        if (!approver.getRuolo().getPermissions().contains("VALIDATE_CONTENT")
+                && !approver.getRuolo().getPermissions().contains("MANAGE_CONTENT")) {
             throw new RuntimeException("User does not have permission to approve content");
         }
 
-        // Creiamo l'approvazione e la salviamo nel database
-        Approval approval = new Approval(content, approver, true);
+        Approval approval = content.getApproval();
+        if (approval == null) {
+            approval = new Approval(content, approver, true);
+            content.setApproval(approval);
+        } else {
+            approval.setApprover(approver);
+            approval.setIsApproved(true);
+        }
         approvalRepository.save(approval);
-
-        // Aggiorniamo il contenuto con l'approvazione
-        content.setApproval(approval);
         return contentRepository.save(content);
     }
 }

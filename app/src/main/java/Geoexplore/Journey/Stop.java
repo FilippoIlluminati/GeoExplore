@@ -1,7 +1,6 @@
 package Geoexplore.Journey;
 
 import jakarta.persistence.*;
-import Geoexplore.Content.Content;
 import Geoexplore.Report.Report;
 import java.util.List;
 
@@ -29,8 +28,9 @@ public class Stop {
     @JoinColumn(name = "journeyID", nullable = false)
     private Journey journey;
 
-    @OneToMany(mappedBy = "stop", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Content> contents;
+    // Rimosso il campo 'contents' in quanto non è più necessario
+    // @OneToMany(mappedBy = "stop", cascade = CascadeType.ALL, orphanRemoval = true)
+    // private List<Content> contents;
 
     @OneToMany(mappedBy = "stop", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Report> reports;
@@ -94,14 +94,6 @@ public class Stop {
 
     public void setJourney(Journey journey) {
         this.journey = journey;
-    }
-
-    public List<Content> getContents() {
-        return contents;
-    }
-
-    public void setContents(List<Content> contents) {
-        this.contents = contents;
     }
 
     public List<Report> getReports() {

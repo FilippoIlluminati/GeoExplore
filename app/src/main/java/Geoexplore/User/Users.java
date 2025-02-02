@@ -1,5 +1,6 @@
 package Geoexplore.User;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import Geoexplore.Journey.Journey;
 import Geoexplore.Content.Content;
@@ -10,7 +11,7 @@ import Geoexplore.Report.Report;
 import java.util.List;
 
 @Entity
-@Table(name = "users") // Specifica il nome della tabella
+@Table(name = "users")
 public class Users {
 
     @Id
@@ -29,7 +30,7 @@ public class Users {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(nullable = false) // Campo per la password
+    @Column(nullable = false)
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -39,7 +40,9 @@ public class Users {
     @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Journey> journeys;
 
+    // Annotazione per spezzare il ciclo durante la serializzazione JSON
     @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Content> contents;
 
     @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -54,6 +57,10 @@ public class Users {
     @OneToMany(mappedBy = "reporter", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Report> reports;
 
+    // Costruttore vuoto richiesto da JPA
+    public Users() {
+    }
+
     // Costruttore con parametri
     public Users(String nome, String cognome, String email, String username, String password, UserRole ruolo) {
         this.nome = nome;
@@ -64,11 +71,8 @@ public class Users {
         this.ruolo = ruolo;
     }
 
-    // Costruttore vuoto richiesto da JPA
-    public Users() {
-    }
-
     // Getter e Setter
+
     public Long getId() {
         return id;
     }
@@ -110,11 +114,11 @@ public class Users {
     }
 
     public String getPassword() {
-        return password; // Getter per la password
+        return password;
     }
 
     public void setPassword(String password) {
-        this.password = password; // Setter per la password
+        this.password = password;
     }
 
     public UserRole getRuolo() {
@@ -123,5 +127,53 @@ public class Users {
 
     public void setRuolo(UserRole ruolo) {
         this.ruolo = ruolo;
+    }
+
+    public List<Journey> getJourneys() {
+        return journeys;
+    }
+
+    public void setJourneys(List<Journey> journeys) {
+        this.journeys = journeys;
+    }
+
+    public List<Content> getContents() {
+        return contents;
+    }
+
+    public void setContents(List<Content> contents) {
+        this.contents = contents;
+    }
+
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(List<Notification> notifications) {
+        this.notifications = notifications;
+    }
+
+    public List<Contest> getContests() {
+        return contests;
+    }
+
+    public void setContests(List<Contest> contests) {
+        this.contests = contests;
+    }
+
+    public List<Event> getEvents() {
+        return events;
+    }
+
+    public void setEvents(List<Event> events) {
+        this.events = events;
+    }
+
+    public List<Report> getReports() {
+        return reports;
+    }
+
+    public void setReports(List<Report> reports) {
+        this.reports = reports;
     }
 }

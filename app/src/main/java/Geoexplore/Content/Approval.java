@@ -1,7 +1,7 @@
 package Geoexplore.Content;
 
-import jakarta.persistence.*;
 import Geoexplore.User.Users;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "approvals")
@@ -11,10 +11,12 @@ public class Approval {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Associazione con il contenuto approvato
     @OneToOne
     @JoinColumn(name = "content_id", nullable = false)
     private Content content;
 
+    // L'utente che ha approvato il contenuto
     @ManyToOne
     @JoinColumn(name = "approved_by", nullable = false)
     private Users approver;
@@ -32,13 +34,9 @@ public class Approval {
         this.isApproved = isApproved;
     }
 
-    // Getter e Setter
+    // Getters & Setters
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public Content getContent() {

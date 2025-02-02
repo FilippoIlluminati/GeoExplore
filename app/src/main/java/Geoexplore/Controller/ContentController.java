@@ -4,9 +4,7 @@ import Geoexplore.Content.Content;
 import Geoexplore.Content.ContentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -14,14 +12,8 @@ import java.util.Optional;
 @RequestMapping("/contents")
 public class ContentController {
 
-    private final ContentService contentService;
-
     @Autowired
-    public ContentController(ContentService contentService) {
-        this.contentService = contentService;
-    }
-
-    // **CRUD DI BASE**
+    private ContentService contentService;
 
     // Crea un nuovo contenuto
     @PostMapping
@@ -40,44 +32,51 @@ public class ContentController {
     // Recupera un contenuto per ID
     @GetMapping("/{id}")
     public ResponseEntity<Content> getContentById(@PathVariable Long id) {
-        Optional<Content> content = contentService.getContentById(id);
-        return content.map(ResponseEntity::ok)
+        Optional<Content> contentOpt = contentService.getContentById(id);
+        return contentOpt.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Elimina un contenuto per ID
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_CONTENT')")
-    public ResponseEntity<Void> deleteContent(@PathVariable Long id) {
-        if (contentService.getContentById(id).isPresent()) {
-            contentService.deleteContent(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } else {
-            return ResponseEntity.notFound().build(); // 404 Not Found
+    // Aggiorna un contenuto esistente
+    @PutMapping("/{id}")
+    public ResponseEntity<Content> updateContent(@PathVariable Long id, @RequestBody Content content) {
+        try {
+            Content updatedContent = contentService.updateContent(id, content);
+            return ResponseEntity.ok(updatedContent);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 
-    // **NUOVI ENDPOINT PER APPROVAZIONE**
+    // Elimina un contenuto
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteContent(@PathVariable Long id) {
+        contentService.deleteContent(id);
+        return ResponseEntity.noContent().build();
+    }
 
-    // Recupera solo i contenuti approvati
+    // Recupera i contenuti approvati
     @GetMapping("/approved")
     public ResponseEntity<List<Content>> getApprovedContents() {
-        List<Content> contents = contentService.getApprovedContents();
-        return ResponseEntity.ok(contents);
+        List<Content> approvedContents = contentService.getApprovedContents();
+        return ResponseEntity.ok(approvedContents);
     }
 
-    // Recupera solo i contenuti in attesa di approvazione
+    // Recupera i contenuti in attesa di approvazione
     @GetMapping("/pending")
     public ResponseEntity<List<Content>> getPendingContents() {
-        List<Content> contents = contentService.getPendingContents();
-        return ResponseEntity.ok(contents);
+        List<Content> pendingContents = contentService.getPendingContents();
+        return ResponseEntity.ok(pendingContents);
     }
 
-    // Approva un contenuto (solo CURATORE o GESTORE_PIATTAFORMA)
-    @PutMapping("/{id}/approve/{approverId}")
-    @PreAuthorize("hasAnyAuthority('VALIDATE_CONTENT', 'MANAGE_CONTENT')")
-    public ResponseEntity<Content> approveContent(@PathVariable Long id, @PathVariable Long approverId) {
-        Content approvedContent = contentService.approveContent(id, approverId);
-        return ResponseEntity.ok(approvedContent);
+    // Approva un contenuto: gli endpoint sono del tipo /contents/{contentId}/approve/{approverId}
+    @PutMapping("/{contentId}/approve/{approverId}")
+    public ResponseEntity<Content> approveContent(@PathVariable Long contentId, @PathVariable Long approverId) {
+        try {
+            Content approvedContent = contentService.approveContent(contentId, approverId);
+            return ResponseEntity.ok(approvedContent);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

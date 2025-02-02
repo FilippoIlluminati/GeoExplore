@@ -1,5 +1,6 @@
 package Geoexplore.POI;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import Geoexplore.User.Users;
 import jakarta.persistence.*;
 
@@ -22,21 +23,20 @@ public class POI {
     @Enumerated(EnumType.STRING)
     private Category categoria;
 
-    // Il comune a cui appartiene il POI
     private String comune;
 
-    // Relazione opzionale: l'utente che ha creato il POI
+    // Ignora la serializzazione del creatore in POI per evitare la ricorsione
     @ManyToOne
     @JoinColumn(name = "creator_id")
+    @JsonIgnore
     private Users creator;
 
-    // Stato di approvazione del POI (false = in attesa, true = approvato)
     private boolean approvato = false;
 
     // Costruttore vuoto richiesto da JPA
-    public POI() {
-    }
+    public POI() {}
 
+    // Costruttore con parametri
     public POI(String nome, String descrizione, double latitude, double longitude, Category categoria, String comune, Users creator, boolean approvato) {
         this.nome = nome;
         this.descrizione = descrizione;
