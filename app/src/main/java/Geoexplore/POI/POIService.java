@@ -3,12 +3,10 @@ package Geoexplore.POI;
 import Geoexplore.User.UserRepository;
 import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
-
-
 
 @Service
 public class POIService {
@@ -16,70 +14,78 @@ public class POIService {
     @Autowired
     private POIRepository poiRepository;
 
+    // Crea un nuovo POI, impostando lo stato di approvazione in base al ruolo del creatore
     @Autowired
     private UserRepository userRepository;
 
-    public List<POI> getAllPOIs() {
-        return poiRepository.findAll();
-    }
-
-    public Optional<POI> getPOIById(Long id) {
-        return poiRepository.findById(id);
-    }
-
-    public POI addPOI(POI poi, Long userId) {
-        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        poi.setOwner(user);
-        if (user.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO) {
-            poi.setApproved(true);
+    public POI createPOI(POI poi) {
+        if (poi.getCreator() != null && poi.getCreator().getId() != null) {
+            // Carica l'utente completo dal DB
+            Optional<Users> creatorOpt = userRepository.findById(poi.getCreator().getId());
+            if (creatorOpt.isPresent()) {
+                Users creator = creatorOpt.get();
+                poi.setCreator(creator);
+                // Controlla il ruolo per impostare l'approvazione
+                if (creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO ||
+                        creator.getRuolo() == UserRole.CURATORE ||
+                        creator.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
+                    poi.setApprovato(true);
+                } else {
+                    poi.setApprovato(false);
+                }
+            } else {
+                poi.setApprovato(false);
+            }
         } else {
-            poi.setApproved(false);
+            poi.setApprovato(false);
         }
         return poiRepository.save(poi);
     }
 
-    public POI updatePOI(Long id, POI updatedPOI, Long userId) {
-        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        return poiRepository.findById(id).map(poi -> {
-            if (poi.getOwner().equals(user) || user.getRuolo() == UserRole.CURATORE || user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
-                poi.setName(updatedPOI.getName());
-                poi.setDescription(updatedPOI.getDescription());
-                poi.setLatitude(updatedPOI.getLatitude());
-                poi.setLongitude(updatedPOI.getLongitude());
-                poi.setCategory(updatedPOI.getCategory());
-                return poiRepository.save(poi);
-            } else {
-                throw new SecurityException("Permessi insufficienti per modificare questo POI");
-            }
-        }).orElseThrow(() -> new RuntimeException("POI not found"));
-    }
 
-    public void deletePOI(Long id, Long userId) {
-        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        poiRepository.findById(id).ifPresentOrElse(poi -> {
-            if (poi.getOwner().equals(user) || user.getRuolo() == UserRole.CURATORE || user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
-                poiRepository.deleteById(id);
-            } else {
-                throw new SecurityException("Permessi insufficienti per eliminare questo POI");
-            }
-        }, () -> {
-            throw new RuntimeException("POI not found");
-        });
-    }
-
-    public List<POI> getUnapprovedPOIs() {
-        return poiRepository.findByApproved(false);
-    }
-
-    public POI approvePOI(Long id, Long userId) {
-        Users user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        if (user.getRuolo() == UserRole.CURATORE || user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
-            return poiRepository.findById(id).map(poi -> {
-                poi.setApproved(true);
-                return poiRepository.save(poi);
-            }).orElseThrow(() -> new RuntimeException("POI not found"));
+    // Aggiorna un POI esistente (lo stato di approvazione non viene modificato automaticamente)
+    public POI updatePOI(Long id, POI updatedPOI) {
+        Optional<POI> optionalPOI = poiRepository.findById(id);
+        if (optionalPOI.isPresent()) {
+            POI existingPOI = optionalPOI.get();
+            existingPOI.setNome(updatedPOI.getNome());
+            existingPOI.setDescrizione(updatedPOI.getDescrizione());
+            existingPOI.setLatitude(updatedPOI.getLatitude());
+            existingPOI.setLongitude(updatedPOI.getLongitude());
+            existingPOI.setCategoria(updatedPOI.getCategoria());
+            existingPOI.setComune(updatedPOI.getComune());
+            existingPOI.setCreator(updatedPOI.getCreator());
+            return poiRepository.save(existingPOI);
         } else {
-            throw new SecurityException("Permessi insufficienti per approvare POI");
+            throw new RuntimeException("POI non trovato con id " + id);
+        }
+    }
+
+    // Elimina un POI
+    public void deletePOI(Long id) {
+        poiRepository.deleteById(id);
+    }
+
+    // Recupera un POI per ID
+    public Optional<POI> getPOIById(Long id) {
+        return poiRepository.findById(id);
+    }
+
+    // Recupera tutti i POI
+    public List<POI> getAllPOIs() {
+        return poiRepository.findAll();
+    }
+
+    // Approva un POI (da chiamare da un endpoint riservato a ruoli autorizzati, ad esempio Curatore)
+    public POI approvePOI(Long id) {
+        Optional<POI> optionalPOI = poiRepository.findById(id);
+        if(optionalPOI.isPresent()) {
+            POI poi = optionalPOI.get();
+            poi.setApprovato(true);
+            return poiRepository.save(poi);
+        } else {
+            throw new RuntimeException("POI non trovato con id " + id);
         }
     }
 }
+

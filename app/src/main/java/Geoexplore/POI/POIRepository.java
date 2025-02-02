@@ -7,7 +7,6 @@ import java.util.List;
 
 @Repository
 public interface POIRepository extends JpaRepository<POI, Long> {
-    List<POI> findByApproved(boolean approved);
-    List<POI> findByOwner(Users owner);
+
 }
 

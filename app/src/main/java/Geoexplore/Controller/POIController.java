@@ -1,13 +1,11 @@
 package Geoexplore.Controller;
 
+
 import Geoexplore.POI.POI;
 import Geoexplore.POI.POIService;
-import Geoexplore.User.Users;
-import Geoexplore.User.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-
-import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,59 +13,61 @@ import java.util.Optional;
 @RequestMapping("/poi")
 public class POIController {
 
-    private final POIService poiService;
-    private final UserRepository userRepository;
-
     @Autowired
-    public POIController(POIService poiService, UserRepository userRepository) {
-        this.poiService = poiService;
-        this.userRepository = userRepository;
-    }
+    private POIService poiService;
 
+    // Endpoint per ottenere tutti i POI
     @GetMapping
-    public List<POI> getAllPOIs() {
-        return poiService.getAllPOIs();
+    public ResponseEntity<List<POI>> getAllPOIs() {
+        List<POI> pois = poiService.getAllPOIs();
+        return ResponseEntity.ok(pois);
     }
 
+    // Endpoint per ottenere un POI tramite ID
     @GetMapping("/{id}")
-    public Optional<POI> getPOIById(@PathVariable Long id) {
-        return poiService.getPOIById(id);
+    public ResponseEntity<POI> getPOIById(@PathVariable Long id) {
+        Optional<POI> poiOpt = poiService.getPOIById(id);
+        return poiOpt.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    // Endpoint per creare un nuovo POI
     @PostMapping
-    public POI addPOI(@RequestBody POI poi, Principal principal) {
-        Long userId = getUserFromPrincipal(principal).getId();
-        return poiService.addPOI(poi, userId);
-    }
-
-    @PutMapping("/{id}")
-    public POI updatePOI(@PathVariable Long id, @RequestBody POI poi, Principal principal) {
-        Long userId = getUserFromPrincipal(principal).getId();
-        return poiService.updatePOI(id, poi, userId);
-    }
-
-    @DeleteMapping("/{id}")
-    public void deletePOI(@PathVariable Long id, Principal principal) {
-        Long userId = getUserFromPrincipal(principal).getId();
-        poiService.deletePOI(id, userId);
-    }
-
-    @GetMapping("/unapproved")
-    public List<POI> getUnapprovedPOIs() {
-        return poiService.getUnapprovedPOIs();
-    }
-
-    @PutMapping("/approve/{id}")
-    public POI approvePOI(@PathVariable Long id, Principal principal) {
-        Long userId = getUserFromPrincipal(principal).getId();
-        return poiService.approvePOI(id, userId);
-    }
-
-    private Users getUserFromPrincipal(Principal principal) {
-        Users user = userRepository.findByUsername(principal.getName());
-        if (user == null) {
-            throw new RuntimeException("User not found");
+    public ResponseEntity<POI> createPOI(@RequestBody POI poi) {
+        try {
+            POI createdPOI = poiService.createPOI(poi);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdPOI);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
         }
-        return user;
+    }
+
+    // Endpoint per aggiornare un POI esistente
+    @PutMapping("/{id}")
+    public ResponseEntity<POI> updatePOI(@PathVariable Long id, @RequestBody POI poi) {
+        try {
+            POI updatedPOI = poiService.updatePOI(id, poi);
+            return ResponseEntity.ok(updatedPOI);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Endpoint per eliminare un POI
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePOI(@PathVariable Long id) {
+        poiService.deletePOI(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Endpoint per approvare un POI (da richiamare, ad esempio, dal ruolo Curatore)
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<POI> approvePOI(@PathVariable Long id) {
+        try {
+            POI approvedPOI = poiService.approvePOI(id);
+            return ResponseEntity.ok(approvedPOI);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
