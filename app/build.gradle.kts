@@ -21,7 +21,7 @@ dependencies {
     // Database
     implementation("com.h2database:h2") // H2 database
 
-    // Altre dipendenze esistenti
+    // Altre dipendenze
     implementation("com.google.code.gson:gson:2.8.9")
     implementation("org.openjfx:javafx-controls:23.0.1")
     implementation("org.openjfx:javafx-fxml:23.0.1")
@@ -29,14 +29,19 @@ dependencies {
     implementation("org.json:json:20210307")
 
     // Test dependencies
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude(group = "org.mockito") // Evita conflitti con Mockito vecchio
+    }
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 }
 
 application {
-    mainClass.set("org.geoexplore.GeoExploreApplication")
+    mainClass.set("Geoexplore.GeoExploreApplication")
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform() // Assicura che i test JUnit 5 vengano riconosciuti
 }

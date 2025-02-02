@@ -1,7 +1,8 @@
 package Geoexplore.Notification;
 
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -39,5 +40,25 @@ public class NotificationService {
     // Elimina una notifica
     public void deleteNotification(Long id) {
         notificationRepository.deleteById(id);
+    }
+
+    // **NUOVI METODI AGGIUNTI**
+
+    // Recupera tutte le notifiche di un utente specifico
+    public List<Notification> getNotificationsByUser(Long userId) {
+        return notificationRepository.findByUtenteId(userId);
+    }
+
+    // Recupera solo le notifiche NON LETTE di un utente specifico
+    public List<Notification> getUnreadNotificationsByUser(Long userId) {
+        return notificationRepository.findByUtenteIdAndStato(userId, NotificationStatus.NON_LETTA);
+    }
+
+    // Marca una notifica come letta
+    public Notification markNotificationAsRead(Long id) {
+        return notificationRepository.findById(id).map(notification -> {
+            notification.setStato(NotificationStatus.LETTA);
+            return notificationRepository.save(notification);
+        }).orElseThrow(() -> new RuntimeException("Notification not found"));
     }
 }

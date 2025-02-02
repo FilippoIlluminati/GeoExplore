@@ -19,7 +19,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("GESTORE_PIATTAFORMA") // Solo GESTORE_PIATTAFORMA può accedere agli endpoint /admin
                         .requestMatchers("/content/upload").hasAuthority("UPLOAD_CONTENT") // Permesso per upload contenuti
                         .requestMatchers("/content/validate").hasAuthority("VALIDATE_CONTENT") // Permesso per validare contenuti
-                        .anyRequest().authenticated() // Tutte le altre richieste richiedono autenticazione
+                        .anyRequest().permitAll() // Rende tutte le richieste pubbliche (come richiesto)
                 )
                 .formLogin(login -> login
                         .loginPage("/login") // URL della pagina di login personalizzata

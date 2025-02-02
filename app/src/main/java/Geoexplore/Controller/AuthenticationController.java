@@ -1,8 +1,10 @@
 package Geoexplore.Controller;
 
+import Geoexplore.DTO.UserDto;
 import Geoexplore.User.Authentication;
 import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -12,14 +14,16 @@ public class AuthenticationController {
     @Autowired
     private Authentication authenticationService;
 
-    // Endpoint per registrare un nuovo utente con JSON
+    // Endpoint per registrare un nuovo utente e restituire un DTO in formato JSON
     @PostMapping("/register")
-    public String register(@RequestBody Users user) {
+    public ResponseEntity<?> register(@RequestBody Users user) {
         boolean isRegistered = authenticationService.register(user);
         if (isRegistered) {
-            return "Utente registrato con successo!";
+            // Creiamo un DTO per restituire i dati dell'utente registrato
+            UserDto userDto = new UserDto(user.getNome(), user.getCognome(), user.getEmail());
+            return ResponseEntity.ok(userDto);
         } else {
-            return "Errore: L'utente esiste già!";
+            return ResponseEntity.badRequest().body("Errore: L'utente esiste già!");
         }
     }
 

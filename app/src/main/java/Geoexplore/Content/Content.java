@@ -5,7 +5,7 @@ import Geoexplore.User.Users;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Content")
+@Table(name = "contents") // Nome tabella al plurale per standard SQL
 public class Content {
 
     @Id
@@ -28,12 +28,12 @@ public class Content {
     @JoinColumn(name = "stopID", nullable = false)
     private Stop stop;
 
-    @Column(nullable = false)
-    private Boolean approved = false;
-
     @ManyToOne
     @JoinColumn(name = "creatorID", nullable = false)
     private Users creator;
+
+    @OneToOne(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Approval approval;
 
     // Costruttore vuoto richiesto da JPA
     public Content() {}
@@ -46,6 +46,7 @@ public class Content {
         this.mediaPath = mediaPath;
         this.stop = stop;
         this.creator = creator;
+        this.approval = null; // Inizialmente non approvato
     }
 
     // Getter e Setter
@@ -97,19 +98,19 @@ public class Content {
         this.stop = stop;
     }
 
-    public Boolean getApproved() {
-        return approved;
-    }
-
-    public void setApproved(Boolean approved) {
-        this.approved = approved;
-    }
-
     public Users getCreator() {
         return creator;
     }
 
     public void setCreator(Users creator) {
         this.creator = creator;
+    }
+
+    public Approval getApproval() {
+        return approval;
+    }
+
+    public void setApproval(Approval approval) {
+        this.approval = approval;
     }
 }

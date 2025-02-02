@@ -35,7 +35,7 @@ public class UserService {
             user.setUsername(userDetails.getUsername());
             user.setRuolo(userDetails.getRuolo());
             return userRepository.save(user);
-        }).orElseThrow(() -> new RuntimeException("User not found"));
+        }).orElseThrow(() -> new RuntimeException("Utente non trovato"));
     }
 
     // Elimina un utente
