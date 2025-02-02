@@ -24,7 +24,7 @@ public class ContentService {
         return contentRepository.findAll();
     }
 
-    // Recupera i contenuti approvati (cioè che hanno un'Approval con isApproved true)
+    // Recupera i contenuti approvati (con approval e isApproved true)
     public List<Content> getApprovedContents() {
         return contentRepository.findAll().stream()
                 .filter(c -> c.getApproval() != null && Boolean.TRUE.equals(c.getApproval().getIsApproved()))
@@ -43,8 +43,22 @@ public class ContentService {
         return contentRepository.findById(id);
     }
 
-    // Crea un nuovo contenuto (inizialmente senza approvazione)
+    // Crea un nuovo contenuto (sia generico che associato a un POI)
     public Content createContent(Content content) {
+        Long creatorId = content.getCreator().getId();
+        Users creator = userRepository.findById(creatorId)
+                .orElseThrow(() -> new RuntimeException("Utente creatore non trovato con id: " + creatorId));
+
+        // Verifica che il creatore abbia il permesso di caricare contenuti
+        if (!creator.getRuolo().getPermissions().contains("UPLOAD_CONTENT")) {
+            throw new RuntimeException("L'utente non ha il permesso di caricare contenuti");
+        }
+        content.setCreator(creator);
+
+        // Se contentType è nullo, lo imposta automaticamente in base alla presenza di un POI
+        if (content.getContentType() == null) {
+            content.setContentType(content.getPoi() != null ? ContentType.POI : ContentType.GENERIC);
+        }
         content.setApproval(null);
         return contentRepository.save(content);
     }
@@ -55,10 +69,13 @@ public class ContentService {
             content.setTitolo(contentDetails.getTitolo());
             content.setDescrizione(contentDetails.getDescrizione());
             content.setPoi(contentDetails.getPoi());
-            content.setCreator(contentDetails.getCreator());
+            Long creatorId = contentDetails.getCreator().getId();
+            Users creator = userRepository.findById(creatorId)
+                    .orElseThrow(() -> new RuntimeException("Utente creatore non trovato con id: " + creatorId));
+            content.setCreator(creator);
             content.setContentType((content.getPoi() != null) ? ContentType.POI : ContentType.GENERIC);
             return contentRepository.save(content);
-        }).orElseThrow(() -> new RuntimeException("Content not found"));
+        }).orElseThrow(() -> new RuntimeException("Contenuto non trovato"));
     }
 
     // Elimina un contenuto
@@ -66,18 +83,17 @@ public class ContentService {
         contentRepository.deleteById(id);
     }
 
-    // Approva un contenuto: l'utente approvatore deve avere i permessi (VALIDATE_CONTENT o MANAGE_CONTENT)
+    // Approva un contenuto: l'utente approvatore deve avere i permessi VALIDATE_CONTENT o MANAGE_CONTENT
     public Content approveContent(Long contentId, Long approverId) {
         Content content = contentRepository.findById(contentId)
-                .orElseThrow(() -> new RuntimeException("Content not found"));
+                .orElseThrow(() -> new RuntimeException("Contenuto non trovato"));
 
         Users approver = userRepository.findById(approverId)
-                .orElseThrow(() -> new RuntimeException("Approver not found"));
+                .orElseThrow(() -> new RuntimeException("Utente approvatore non trovato"));
 
-        // Verifica se l'utente ha il permesso di validare i contenuti
-        if (!approver.getRuolo().getPermissions().contains("VALIDATE_CONTENT")
-                && !approver.getRuolo().getPermissions().contains("MANAGE_CONTENT")) {
-            throw new RuntimeException("User does not have permission to approve content");
+        if (!approver.getRuolo().getPermissions().contains("VALIDATE_CONTENT") &&
+                !approver.getRuolo().getPermissions().contains("MANAGE_CONTENT")) {
+            throw new RuntimeException("L'utente non ha il permesso di approvare contenuti");
         }
 
         Approval approval = content.getApproval();

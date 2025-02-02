@@ -23,18 +23,18 @@ public class Content {
     @Column(nullable = false)
     private ContentType contentType;
 
-    // Associazione opzionale al POI: se il contenuto è associato a un POI, questo campo viene valorizzato.
+    // Se il contenuto è associato a un POI, questo campo viene valorizzato; altrimenti è null (contenuto generico)
     @ManyToOne(optional = true)
     @JoinColumn(name = "poi_id")
     private POI poi;
 
-    // Proprietà 'creator' per collegare il contenuto all'utente che lo ha creato.
+    // Il creatore del contenuto (obbligatorio)
     @ManyToOne(optional = false)
     @JoinColumn(name = "creator_id", nullable = false)
-    @JsonBackReference
+    @JsonBackReference  // Interrompe il ciclo con Users.contents (che nel lato "padre" deve avere @JsonManagedReference)
     private Users creator;
 
-    // Relazione uno-a-uno con Approval: tiene traccia dell'approvazione del contenuto.
+    // Relazione one-to-one con Approval: tiene traccia dell'approvazione del contenuto
     @OneToOne(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
     private Approval approval;
 

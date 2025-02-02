@@ -17,9 +17,13 @@ public class ContentController {
 
     // Crea un nuovo contenuto
     @PostMapping
-    public ResponseEntity<Content> createContent(@RequestBody Content content) {
-        Content savedContent = contentService.createContent(content);
-        return ResponseEntity.ok(savedContent);
+    public ResponseEntity<?> createContent(@RequestBody Content content) {
+        try {
+            Content savedContent = contentService.createContent(content);
+            return ResponseEntity.ok(savedContent);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // Recupera tutti i contenuti
@@ -39,12 +43,12 @@ public class ContentController {
 
     // Aggiorna un contenuto esistente
     @PutMapping("/{id}")
-    public ResponseEntity<Content> updateContent(@PathVariable Long id, @RequestBody Content content) {
+    public ResponseEntity<?> updateContent(@PathVariable Long id, @RequestBody Content content) {
         try {
             Content updatedContent = contentService.updateContent(id, content);
             return ResponseEntity.ok(updatedContent);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
@@ -69,14 +73,14 @@ public class ContentController {
         return ResponseEntity.ok(pendingContents);
     }
 
-    // Approva un contenuto: gli endpoint sono del tipo /contents/{contentId}/approve/{approverId}
+    // Approva un contenuto: endpoint /contents/{contentId}/approve/{approverId}
     @PutMapping("/{contentId}/approve/{approverId}")
-    public ResponseEntity<Content> approveContent(@PathVariable Long contentId, @PathVariable Long approverId) {
+    public ResponseEntity<?> approveContent(@PathVariable Long contentId, @PathVariable Long approverId) {
         try {
             Content approvedContent = contentService.approveContent(contentId, approverId);
             return ResponseEntity.ok(approvedContent);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }
