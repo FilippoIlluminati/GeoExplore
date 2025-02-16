@@ -1,74 +1,69 @@
 package Geoexplore.Controller;
 
-import Geoexplore.User.Users;
-import Geoexplore.User.UserManager;
+import Geoexplore.User.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
-    private final UserManager userManager;
-
     @Autowired
-    public UserController(UserManager userManager) {
-        this.userManager = userManager;
+    private UserService userService;
+
+    // Creazione utente specifico (Solo Gestore della Piattaforma)
+    @PostMapping("/create-user")
+    public ResponseEntity<?> createUserByGestore(
+            @RequestBody Users user,
+            @RequestParam Long requesterId) {
+
+        Users requester = userService.getUserById(requesterId)
+                .orElseThrow(() -> new SecurityException("Requester non trovato"));
+
+        Users createdUser = userService.createUserByGestore(user, requester);
+        return ResponseEntity.ok("Utente creato con successo: " + createdUser.getUsername());
     }
 
-    // Crea un nuovo utente - Accessibile solo al Gestore Piattaforma
-    @PostMapping
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<Users> createUser(@RequestBody Users user) {
-        Users savedUser = userManager.saveUser(user);
-        return ResponseEntity.ok(savedUser);
+    // Approvazione contributor (Solo Gestore della Piattaforma)
+    @PatchMapping("/approve-contributor/{id}")
+    public ResponseEntity<?> approveContributorByGestore(
+            @PathVariable Long id,
+            @RequestParam Long requesterId) {
+
+        Users requester = userService.getUserById(requesterId)
+                .orElseThrow(() -> new SecurityException("Requester non trovato"));
+
+        Users approvedUser = userService.approveContributorByGestore(id, requester);
+        return ResponseEntity.ok("Contributor approvato: " + approvedUser.getUsername());
     }
 
-    // Recupera tutti gli utenti - Accessibile al Gestore Piattaforma e al Curatore
-    @GetMapping
-    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'VIEW_USERS')")
-    public ResponseEntity<List<Users>> getAllUsers() {
-        List<Users> users = userManager.getAllUsers();
-        return ResponseEntity.ok(users);
+    // Endpoint per ottenere tutti gli utenti
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    // Recupera un utente per ID - Accessibile al Gestore Piattaforma e al Curatore
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'VIEW_USERS')")
-    public ResponseEntity<Users> getUserById(@PathVariable Long id) {
-        Optional<Users> user = userManager.getUserById(id);
-        return user.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // Elimina un utente per ID - Accessibile solo al Gestore Piattaforma
+    // Endpoint per eliminare un utente (Solo Gestore della Piattaforma)
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        Optional<Users> user = userManager.getUserById(id);
-        if (user.isPresent()) {
-            userManager.deleteUser(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } else {
-            return ResponseEntity.notFound().build(); // 404 Not Found
-        }
-    }
+    public ResponseEntity<?> deleteUser(
+            @PathVariable Long id,
+            @RequestParam Long requesterId) {
 
-    // Aggiorna un utente per ID - Accessibile solo al Gestore Piattaforma
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<Users> updateUser(@PathVariable Long id, @RequestBody Users updatedUser) {
-        Optional<Users> user = userManager.getUserById(id);
-        if (user.isPresent()) {
-            Users savedUser = userManager.updateUser(id, updatedUser);
-            return ResponseEntity.ok(savedUser);
-        } else {
-            return ResponseEntity.notFound().build();
+        Users requester = userService.getUserById(requesterId)
+                .orElseThrow(() -> new SecurityException("Requester non trovato"));
+
+        // Controllo: il gestore non può eliminarsi da solo
+        if (requester.getId().equals(id)) {
+            return ResponseEntity.status(400).body("Il gestore non può eliminarsi da solo.");
         }
+
+        // Verifica che il richiedente sia il Gestore della Piattaforma
+        if (requester.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            return ResponseEntity.status(403).body("Solo il Gestore della piattaforma può eliminare un utente.");
+        }
+
+        userService.deleteUser(id);
+        return ResponseEntity.ok("Utente eliminato con successo.");
     }
 }

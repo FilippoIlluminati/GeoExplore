@@ -1,8 +1,12 @@
 package Geoexplore.Config;
 
+import Geoexplore.Security.CustomUserDetailsService;
+import Geoexplore.User.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -10,36 +14,39 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
+    // Definisce il bean per il caricamento degli utenti dal database
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable()) // Disabilita CSRF per test e sviluppo
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/login", "/register").permitAll() // Accesso pubblico per autenticazione e registrazione
-                        .requestMatchers("/admin/**").hasRole("GESTORE_PIATTAFORMA") // Solo GESTORE_PIATTAFORMA può accedere agli endpoint /admin
-                        .requestMatchers("/content/upload").hasAuthority("UPLOAD_CONTENT") // Permesso per upload contenuti
-                        .requestMatchers("/content/validate").hasAuthority("VALIDATE_CONTENT") // Permesso per validare contenuti
-                        .anyRequest().permitAll() // Rende tutte le richieste pubbliche (come richiesto)
-                )
-                .formLogin(login -> login
-                        .loginPage("/login") // URL della pagina di login personalizzata
-                        .defaultSuccessUrl("/", true) // Reindirizzamento alla home dopo login
-                        .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login")
-                        .permitAll()
-                )
-                .headers(headers -> headers
-                        .frameOptions(frameOptions -> frameOptions.disable()) // Permette frame per H2 Console
-                );
+    public UserDetailsService userDetailsService(UserRepository userRepository) {
+        return new CustomUserDetailsService(userRepository);
+    }
 
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(UserDetailsService userDetailsService,
+                                                            PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService); // usa il nostro custom user details service
+        authProvider.setPasswordEncoder(passwordEncoder);
+        return authProvider;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, DaoAuthenticationProvider authProvider) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable()) // Disabilita CSRF per le API REST (attenzione in produzione)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**").permitAll()  // Le rotte /auth/** sono libere (registrazione, login)
+                        .requestMatchers("/users/all").permitAll()  // L'endpoint per ottenere tutti gli utenti è pubblico
+                        .requestMatchers("/users/create-user").hasAuthority("CREATE_USERS")
+                        .requestMatchers("/users/approve-contributor/**").hasAuthority("APPROVE_CONTRIBUTORS")
+                        .anyRequest().authenticated()
+                )
+                .authenticationProvider(authProvider)
+                .httpBasic();  // Abilita l'autenticazione HTTP Basic per le altre rotte
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // Encoder per proteggere le password
+        return new BCryptPasswordEncoder();
     }
 }

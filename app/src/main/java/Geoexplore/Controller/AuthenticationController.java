@@ -1,8 +1,9 @@
 package Geoexplore.Controller;
 
-import Geoexplore.DTO.UserDto;
 import Geoexplore.User.Authentication;
 import Geoexplore.User.Users;
+import Geoexplore.User.UserRole;
+import Geoexplore.User.AccountStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,38 +15,48 @@ public class AuthenticationController {
     @Autowired
     private Authentication authenticationService;
 
-    // Endpoint per registrare un nuovo utente e restituire un DTO in formato JSON
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Users user) {
-        boolean isRegistered = authenticationService.register(user);
-        if (isRegistered) {
-            // Creiamo un DTO per restituire i dati dell'utente registrato
-            UserDto userDto = new UserDto(user.getNome(), user.getCognome(), user.getEmail());
-            return ResponseEntity.ok(userDto);
-        } else {
-            return ResponseEntity.badRequest().body("Errore: L'utente esiste già!");
+        try {
+            // 1) TURISTA non si registra
+            if (user.getRuolo() == UserRole.TURISTA) {
+                return ResponseEntity.badRequest().body("Registrazione non necessaria per il ruolo Turista.");
+            }
+            // 2) Ruoli riservati non si autoregistrano
+            if (user.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO ||
+                    user.getRuolo() == UserRole.ANIMATORE ||
+                    user.getRuolo() == UserRole.CURATORE ||
+                    user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
+                return ResponseEntity.badRequest().body("Non puoi auto-registrarti come " + user.getRuolo());
+            }
+            // 3) CONTRIBUTOR -> stato IN_ATTESA
+            if (user.getRuolo() == UserRole.CONTRIBUTOR) {
+                user.setAccountStatus(AccountStatus.IN_ATTESA);
+                authenticationService.register(user);
+                return ResponseEntity.ok("Registrazione completata. L'account è in attesa di approvazione.");
+            }
+            // 4) TURISTA_AUTENTICATO -> stato ATTIVO
+            else if (user.getRuolo() == UserRole.TURISTA_AUTENTICATO) {
+                user.setAccountStatus(AccountStatus.ATTIVO);
+                authenticationService.register(user);
+                return ResponseEntity.ok("Registrazione completata. Puoi accedere subito.");
+            }
+            return ResponseEntity.badRequest().body("Ruolo non riconosciuto per la registrazione.");
+        } catch (Exception ex) {
+            // Se manca la password o c'è un utente duplicato, etc.
+            return ResponseEntity.status(500).body("Errore durante la registrazione: " + ex.getMessage());
         }
     }
 
-    // Endpoint per autenticare un utente
     @PostMapping("/login")
-    public String login(@RequestParam String username, @RequestParam String password) {
-        boolean isAuthenticated = authenticationService.authenticate(username, password);
-        if (isAuthenticated) {
-            return "Accesso effettuato con successo!";
-        } else {
-            return "Errore: Credenziali non valide!";
-        }
-    }
-
-    // Endpoint per recuperare o gestire la password di un utente
-    @GetMapping("/getPassword")
-    public String getPassword(@RequestParam String username) {
+    public ResponseEntity<?> login(@RequestParam String username, @RequestParam String password) {
         Users user = authenticationService.getUserByUsername(username);
-        if (user != null) {
-            return "La password è protetta per motivi di sicurezza. Contatta l'amministratore per reimpostarla.";
+        if (user != null && user.getAccountStatus() == AccountStatus.ATTIVO) {
+            boolean isAuthenticated = authenticationService.authenticate(username, password);
+            return isAuthenticated ? ResponseEntity.ok("Accesso effettuato con successo!")
+                    : ResponseEntity.status(401).body("Credenziali non valide.");
         } else {
-            return "Errore: Utente non trovato!";
+            return ResponseEntity.status(403).body("L'account non è attivo o è in attesa.");
         }
     }
 }
