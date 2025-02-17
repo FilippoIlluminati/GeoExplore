@@ -4,6 +4,8 @@ import Geoexplore.User.UserRepository;
 import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -41,26 +43,33 @@ public class POIService {
         return R * c;
     }
 
-    // Creazione del POI con controllo del range e delle autorizzazioni
+    // Helper per ottenere l'utente autenticato corrente
+    private Users getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        Users user = userRepository.findByUsername(username);
+        if (user == null) {
+            throw new RuntimeException("Utente non trovato o non autenticato");
+        }
+        return user;
+    }
+
+    // Creazione del POI (solo CONTRIBUTOR e CONTRIBUTOR_AUTORIZZATO possono creare POI)
     public POI createPOI(POI poi) {
         // Verifica che le coordinate siano nel range consentito
         if (!isWithinAllowedArea(poi.getLatitude(), poi.getLongitude())) {
             throw new RuntimeException("Impossibile creare il POI: fuori dal limite di competenza");
         }
-
         // Il creatore deve essere specificato
         if (poi.getCreator() == null || poi.getCreator().getId() == null) {
             throw new RuntimeException("Creazione POI fallita: creatore non specificato");
         }
-
         Optional<Users> creatorOpt = userRepository.findById(poi.getCreator().getId());
         if (!creatorOpt.isPresent()) {
             throw new RuntimeException("Creatore non trovato");
         }
-
         Users creator = creatorOpt.get();
         poi.setCreator(creator);
-
         // Solo CONTRIBUTOR e CONTRIBUTOR_AUTORIZZATO hanno il permesso di creare POI
         if (creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO) {
             poi.setApprovato(true);
@@ -69,34 +78,49 @@ public class POIService {
         } else {
             throw new RuntimeException("Non hai il permesso di creare un POI");
         }
-
         return poiRepository.save(poi);
     }
 
-    // Aggiornamento del POI con controllo del range
+    // Aggiornamento del POI: può essere aggiornato solo dal CURATORE o dal creatore del POI
     public POI updatePOI(Long id, POI updatedPOI) {
+        Users currentUser = getAuthenticatedUser();
+        Optional<POI> optionalPOI = poiRepository.findById(id);
+        if (optionalPOI.isEmpty()) {
+            throw new RuntimeException("POI non trovato con id " + id);
+        }
+        POI existingPOI = optionalPOI.get();
+        // Controllo: se l'utente non è CURATORE e non è il creatore, l'operazione è vietata
+        if (currentUser.getRuolo() != UserRole.CURATORE &&
+                !existingPOI.getCreator().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Solo il curatore o il creatore del POI possono modificarlo");
+        }
+        // Verifica che le nuove coordinate siano nel range consentito
         if (!isWithinAllowedArea(updatedPOI.getLatitude(), updatedPOI.getLongitude())) {
             throw new RuntimeException("Impossibile aggiornare il POI: fuori dal limite di competenza");
         }
-
-        Optional<POI> optionalPOI = poiRepository.findById(id);
-        if (optionalPOI.isPresent()) {
-            POI existingPOI = optionalPOI.get();
-            existingPOI.setNome(updatedPOI.getNome());
-            existingPOI.setDescrizione(updatedPOI.getDescrizione());
-            existingPOI.setLatitude(updatedPOI.getLatitude());
-            existingPOI.setLongitude(updatedPOI.getLongitude());
-            existingPOI.setCategoria(updatedPOI.getCategoria());
-            existingPOI.setComune(updatedPOI.getComune());
-            existingPOI.setCreator(updatedPOI.getCreator());
-            return poiRepository.save(existingPOI);
-        } else {
-            throw new RuntimeException("POI non trovato con id " + id);
-        }
+        // Aggiorna i campi del POI (il creatore non viene modificato)
+        existingPOI.setNome(updatedPOI.getNome());
+        existingPOI.setDescrizione(updatedPOI.getDescrizione());
+        existingPOI.setLatitude(updatedPOI.getLatitude());
+        existingPOI.setLongitude(updatedPOI.getLongitude());
+        existingPOI.setCategoria(updatedPOI.getCategoria());
+        existingPOI.setComune(updatedPOI.getComune());
+        return poiRepository.save(existingPOI);
     }
 
-    // Elimina un POI
+    // Eliminazione del POI: può essere eliminato solo dal CURATORE o dal creatore del POI
     public void deletePOI(Long id) {
+        Users currentUser = getAuthenticatedUser();
+        Optional<POI> optionalPOI = poiRepository.findById(id);
+        if (optionalPOI.isEmpty()) {
+            throw new RuntimeException("POI non trovato con id " + id);
+        }
+        POI poi = optionalPOI.get();
+        // Controllo: se l'utente non è CURATORE e non è il creatore, l'operazione è vietata
+        if (currentUser.getRuolo() != UserRole.CURATORE &&
+                !poi.getCreator().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Solo il curatore o il creatore del POI possono eliminarlo");
+        }
         poiRepository.deleteById(id);
     }
 
@@ -110,8 +134,12 @@ public class POIService {
         return poiRepository.findAll();
     }
 
-    // Approva un POI (da chiamare da un endpoint riservato a ruoli autorizzati, ad esempio Curatore)
+    // Approvazione del POI: può essere approvato solo dal CURATORE
     public POI approvePOI(Long id) {
+        Users currentUser = getAuthenticatedUser();
+        if (currentUser.getRuolo() != UserRole.CURATORE) {
+            throw new RuntimeException("Solo il curatore può approvare i POI");
+        }
         Optional<POI> optionalPOI = poiRepository.findById(id);
         if(optionalPOI.isPresent()) {
             POI poi = optionalPOI.get();
