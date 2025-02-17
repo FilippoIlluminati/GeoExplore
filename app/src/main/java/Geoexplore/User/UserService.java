@@ -1,6 +1,7 @@
 package Geoexplore.User;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.List;
@@ -11,17 +12,18 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    // Recupera un utente per ID
+    @Autowired
+    private PasswordEncoder passwordEncoder;  // Iniettiamo il bean PasswordEncoder
+
     public Optional<Users> getUserById(Long id) {
         return userRepository.findById(id);
     }
 
-    // Recupera tutti gli utenti
     public List<Users> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // Creazione di un utente specifico (Solo Gestore della piattaforma)
+    // Creazione utenti specifici (Solo Gestore della piattaforma)
     public Users createUserByGestore(Users user, Users requester) {
         if (requester.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
             throw new SecurityException("Solo il Gestore della piattaforma può creare utenti specifici.");
@@ -33,10 +35,12 @@ public class UserService {
                 user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
             user.setAccountStatus(AccountStatus.ATTIVO);
         }
+        // Codifica la password prima di salvare
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
-    // Approvazione di un contributor (Solo Gestore della piattaforma)
+    // Approvazione contributor (Solo Gestore della piattaforma)
     public Users approveContributorByGestore(Long userId, Users requester) {
         if (requester.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
             throw new SecurityException("Solo il Gestore della piattaforma può approvare utenti.");

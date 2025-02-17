@@ -14,37 +14,71 @@ public class POIService {
     @Autowired
     private POIRepository poiRepository;
 
-    // Crea un nuovo POI, impostando lo stato di approvazione in base al ruolo del creatore
     @Autowired
     private UserRepository userRepository;
 
+    // Coordinate del centro di Corridonia (come in map.html)
+    private static final double CENTER_LAT = 43.2482194;
+    private static final double CENTER_LON = 13.5075306;
+    // Raggio consentito in metri
+    private static final double ALLOWED_RADIUS_METERS = 750;
+
+    // Metodo per verificare se le coordinate sono nel range consentito
+    private boolean isWithinAllowedArea(double lat, double lon) {
+        double distance = calculateDistance(CENTER_LAT, CENTER_LON, lat, lon);
+        return distance <= ALLOWED_RADIUS_METERS;
+    }
+
+    // Calcola la distanza in metri tra due coordinate (formula Haversine)
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371000; // Raggio della Terra in metri
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    // Creazione del POI con controllo del range e delle autorizzazioni
     public POI createPOI(POI poi) {
-        if (poi.getCreator() != null && poi.getCreator().getId() != null) {
-            // Carica l'utente completo dal DB
-            Optional<Users> creatorOpt = userRepository.findById(poi.getCreator().getId());
-            if (creatorOpt.isPresent()) {
-                Users creator = creatorOpt.get();
-                poi.setCreator(creator);
-                // Controlla il ruolo per impostare l'approvazione
-                if (creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO ||
-                        creator.getRuolo() == UserRole.CURATORE ||
-                        creator.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
-                    poi.setApprovato(true);
-                } else {
-                    poi.setApprovato(false);
-                }
-            } else {
-                poi.setApprovato(false);
-            }
-        } else {
-            poi.setApprovato(false);
+        // Verifica che le coordinate siano nel range consentito
+        if (!isWithinAllowedArea(poi.getLatitude(), poi.getLongitude())) {
+            throw new RuntimeException("Impossibile creare il POI: fuori dal limite di competenza");
         }
+
+        // Il creatore deve essere specificato
+        if (poi.getCreator() == null || poi.getCreator().getId() == null) {
+            throw new RuntimeException("Creazione POI fallita: creatore non specificato");
+        }
+
+        Optional<Users> creatorOpt = userRepository.findById(poi.getCreator().getId());
+        if (!creatorOpt.isPresent()) {
+            throw new RuntimeException("Creatore non trovato");
+        }
+
+        Users creator = creatorOpt.get();
+        poi.setCreator(creator);
+
+        // Solo CONTRIBUTOR e CONTRIBUTOR_AUTORIZZATO hanno il permesso di creare POI
+        if (creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO) {
+            poi.setApprovato(true);
+        } else if (creator.getRuolo() == UserRole.CONTRIBUTOR) {
+            poi.setApprovato(false);
+        } else {
+            throw new RuntimeException("Non hai il permesso di creare un POI");
+        }
+
         return poiRepository.save(poi);
     }
 
-
-    // Aggiorna un POI esistente (lo stato di approvazione non viene modificato automaticamente)
+    // Aggiornamento del POI con controllo del range
     public POI updatePOI(Long id, POI updatedPOI) {
+        if (!isWithinAllowedArea(updatedPOI.getLatitude(), updatedPOI.getLongitude())) {
+            throw new RuntimeException("Impossibile aggiornare il POI: fuori dal limite di competenza");
+        }
+
         Optional<POI> optionalPOI = poiRepository.findById(id);
         if (optionalPOI.isPresent()) {
             POI existingPOI = optionalPOI.get();
@@ -88,4 +122,3 @@ public class POIService {
         }
     }
 }
-

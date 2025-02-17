@@ -4,6 +4,7 @@ import Geoexplore.Security.CustomUserDetailsService;
 import Geoexplore.User.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -36,6 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()  // Le rotte /auth/** sono libere (registrazione, login)
                         .requestMatchers("/users/all").permitAll()  // L'endpoint per ottenere tutti gli utenti è pubblico
+                        .requestMatchers(HttpMethod.GET, "/poi/**").permitAll() // GET dei POI accessibile a tutti
                         .requestMatchers("/users/create-user").hasAuthority("CREATE_USERS")
                         .requestMatchers("/users/approve-contributor/**").hasAuthority("APPROVE_CONTRIBUTORS")
                         .anyRequest().authenticated()

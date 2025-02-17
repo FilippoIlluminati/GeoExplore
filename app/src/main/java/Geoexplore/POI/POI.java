@@ -2,6 +2,7 @@ package Geoexplore.POI;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import Geoexplore.User.Users;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
@@ -28,7 +29,7 @@ public class POI {
     // Ignora la serializzazione del creatore in POI per evitare la ricorsione
     @ManyToOne
     @JoinColumn(name = "creator_id")
-    @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Users creator;
 
     private boolean approvato = false;
