@@ -15,7 +15,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    // Definisce il bean per il caricamento degli utenti dal database
     @Bean
     public UserDetailsService userDetailsService(UserRepository userRepository) {
         return new CustomUserDetailsService(userRepository);
@@ -25,7 +24,7 @@ public class SecurityConfig {
     public DaoAuthenticationProvider authenticationProvider(UserDetailsService userDetailsService,
                                                             PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService); // usa il nostro custom user details service
+        authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
@@ -33,17 +32,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, DaoAuthenticationProvider authProvider) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Disabilita CSRF per le API REST (attenzione in produzione)
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()  // Le rotte /auth/** sono libere (registrazione, login)
-                        .requestMatchers("/users/all").permitAll()  // L'endpoint per ottenere tutti gli utenti è pubblico
-                        .requestMatchers(HttpMethod.GET, "/poi/**").permitAll() // GET dei POI accessibile a tutti
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/users/all").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/poi/**").permitAll()
                         .requestMatchers("/users/create-user").hasAuthority("CREATE_USERS")
                         .requestMatchers("/users/approve-contributor/**").hasAuthority("APPROVE_CONTRIBUTORS")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authProvider)
-                .httpBasic();  // Abilita l'autenticazione HTTP Basic per le altre rotte
+                .httpBasic();
         return http.build();
     }
 

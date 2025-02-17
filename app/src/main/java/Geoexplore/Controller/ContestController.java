@@ -1,102 +1,93 @@
 package Geoexplore.Controller;
 
-import Geoexplore.Contest.Contest;
-import Geoexplore.Contest.ContestManager;
-import Geoexplore.Contest.ContestService;
-import Geoexplore.Contest.ContestStatus;
+import Geoexplore.Contest.*;
+import Geoexplore.User.UserRole;
+import Geoexplore.User.Users;
+import Geoexplore.User.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
-@RequestMapping("/contests")
+@RequestMapping("/contest")
 public class ContestController {
 
-    private final ContestManager contestManager;
-    private final ContestService contestService;
+    @Autowired
+    private ContestService contestService;
 
     @Autowired
-    public ContestController(ContestManager contestManager, ContestService contestService) {
-        this.contestManager = contestManager;
-        this.contestService = contestService;
+    private UserRepository userRepository;
+
+    // Endpoint per creare un concorso (solo da parte di un Animatore)
+    @PostMapping("/create")
+    public ResponseEntity<?> creaConcorso(@RequestBody Contest concorso, @RequestParam Long creatoreId) {
+        Users creatore = userRepository.findById(creatoreId)
+                .orElseThrow(() -> new RuntimeException("Creatore non trovato"));
+        if (creatore.getRuolo() != UserRole.ANIMATORE) {
+            return ResponseEntity.status(403).body("Solo un Animatore può creare un concorso.");
+        }
+        Contest concorsoCreato = contestService.creaConcorso(concorso, creatoreId);
+        return ResponseEntity.ok("Concorso creato con successo. ID: " + concorsoCreato.getId());
     }
 
-    // Crea un nuovo contest
-    @PostMapping
-    public ResponseEntity<?> createContest(@RequestBody Contest contest) {
+    // Endpoint per partecipare ad un concorso (per Contributor o Contributor Autorizzato)
+    @PostMapping("/{concorsoId}/join")
+    public ResponseEntity<?> partecipaAlConcorso(@PathVariable Long concorsoId,
+                                                 @RequestParam Long partecipanteId,
+                                                 @RequestBody(required = false) ContestEntry partecipazione) {
+        if (partecipazione == null) {
+            partecipazione = new ContestEntry();
+            partecipazione.setContenuto("");
+        }
+        ContestEntry partecipazioneCreato = contestService.partecipaAlConcorso(concorsoId, partecipazione, partecipanteId);
+        return ResponseEntity.ok("Partecipazione inviata. ID partecipazione: " + partecipazioneCreato.getId());
+    }
+
+    // Endpoint per visualizzare tutte le partecipazioni di un concorso
+    @GetMapping("/{concorsoId}/partecipazioni")
+    public ResponseEntity<?> getPartecipazioni(@PathVariable Long concorsoId) {
+        List<ContestEntry> partecipazioni = contestService.getPartecipazioniPerConcorso(concorsoId);
+        return ResponseEntity.ok(partecipazioni);
+    }
+
+    // Endpoint per approvare una partecipazione (solo da parte di un Animatore o Curatore)
+    @PatchMapping("/partecipazione/{partecipazioneId}/approva")
+    public ResponseEntity<?> approvaPartecipazione(@PathVariable Long partecipazioneId, @RequestParam Long validatoreId) {
         try {
-            Contest savedContest = contestService.createContest(contest);
-            return ResponseEntity.ok(savedContest);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            ContestEntry partecipazione = contestService.approvaPartecipazione(partecipazioneId, validatoreId);
+            return ResponseEntity.ok("Partecipazione approvata. ID: " + partecipazione.getId());
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body("Errore nell'approvazione: " + ex.getMessage());
         }
     }
 
-    // Recupera tutti i contest
-    @GetMapping
-    public ResponseEntity<List<Contest>> getAllContests() {
-        List<Contest> contests = contestManager.getAllContests();
-        return ResponseEntity.ok(contests);
-    }
-
-    // Recupera un contest per ID
-    @GetMapping("/{id}")
-    public ResponseEntity<Contest> getContestById(@PathVariable Long id) {
-        Optional<Contest> contest = contestManager.getContestById(id);
-        return contest.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // Aggiorna un contest esistente
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateContest(@PathVariable Long id, @RequestBody Contest contest) {
+    // Endpoint per rifiutare una partecipazione (solo da parte di un Animatore o Curatore)
+    @PatchMapping("/partecipazione/{partecipazioneId}/rifiuta")
+    public ResponseEntity<?> rifiutaPartecipazione(@PathVariable Long partecipazioneId, @RequestParam Long validatoreId) {
         try {
-            Contest updatedContest = contestService.updateContest(id, contest);
-            return ResponseEntity.ok(updatedContest);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            ContestEntry partecipazione = contestService.rifiutaPartecipazione(partecipazioneId, validatoreId);
+            return ResponseEntity.ok("Partecipazione rifiutata. ID: " + partecipazione.getId());
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body("Errore nel rifiuto: " + ex.getMessage());
         }
     }
 
-    // Aggiorna lo stato di un contest
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<?> updateContestStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    // Endpoint per recuperare tutti i concorsi (con le relative partecipazioni, grazie a fetch EAGER)
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllConcorsi() {
+        return ResponseEntity.ok(contestService.getAllConcorsi());
+    }
+
+    // Endpoint per recuperare concorsi filtrati per stato
+    @GetMapping("/status")
+    public ResponseEntity<?> getConcorsiByStato(@RequestParam String stato) {
+        StatoConcorso s;
         try {
-            String newStatus = body.get("status");
-            ContestStatus status = ContestStatus.valueOf(newStatus.trim().toUpperCase());
-            Contest updatedContest = contestService.updateContestStatus(id, status);
-            return ResponseEntity.ok(updatedContest);
+            s = StatoConcorso.valueOf(stato);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Errore: Status non valido. Usa: APERTO, CHIUSO, IN_REVISIONE");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.badRequest().body("Stato non valido. I possibili valori sono: BOZZA, IN_CORSO, CHIUSO.");
         }
-    }
-
-    // Registra un partecipante a un contest
-    @PostMapping("/{contestId}/register/{userId}")
-    public ResponseEntity<?> registerParticipant(@PathVariable Long contestId, @PathVariable Long userId) {
-        try {
-            Contest contest = contestService.registerParticipant(contestId, userId);
-            return ResponseEntity.ok(contest);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    // Elimina un contest
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteContest(@PathVariable Long id) {
-        if (contestManager.getContestById(id).isPresent()) {
-            contestManager.deleteContest(id);
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(contestService.getConcorsiByStato(s));
     }
 }

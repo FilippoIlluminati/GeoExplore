@@ -5,6 +5,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ContestRepository extends JpaRepository<Contest, Long> {
-    List<Contest> findByStato(StatoConcorso stato);
+public interface ContestEntryRepository extends JpaRepository<ContestEntry, Long> {
+    List<ContestEntry> findByConcorsoId(Long concorsoId);
 }

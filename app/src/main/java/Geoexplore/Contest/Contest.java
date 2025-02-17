@@ -1,139 +1,76 @@
 package Geoexplore.Contest;
 
-import Geoexplore.User.Users;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.List;
+import Geoexplore.User.Users;
 
 @Entity
-@Table(name = "Contest")
+@Table(name = "concorsi")
 public class Contest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String titolo;
-
-    // Campo obbligatorio: obiettivo del contest
-    @Column(nullable = false)
-    private String obiettivo;
-
-    // Campo facoltativo: descrizione aggiuntiva
-    @Column(columnDefinition = "TEXT")
     private String descrizione;
 
-    @Column(nullable = false)
-    private LocalDate dataInizio;
-
-    @Column(nullable = false)
-    private LocalDate dataFine;
-
-    // L’organizzatore del contest: deve essere un animatore o il gestore della piattaforma
-    @ManyToOne
-    @JoinColumn(name = "organizzatoreID", nullable = false)
-    private Users organizzatore;
+    private LocalDateTime dataInizio;
+    private LocalDateTime dataFine;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ContestStatus status;
+    private StatoConcorso stato = StatoConcorso.BOZZA;
 
-    // Set dei partecipanti (utenti) che si iscrivono al contest
-    @ManyToMany
-    @JoinTable(
-            name = "contest_participants",
-            joinColumns = @JoinColumn(name = "contest_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<Users> partecipanti = new HashSet<>();
+    // Flag per indicare se il concorso è su invito
+    private boolean invitazionale = false;
 
-    // Costruttore vuoto richiesto da JPA
+    // Lista degli ID degli utenti invitati (opzionale)
+    @ElementCollection
+    private List<Long> invitedUserIds;
+
+    // L'animatore (creatore) che ha creato il concorso
+    @ManyToOne
+    @JoinColumn(name = "creator_id")
+    private Users creatore;
+
+    // Relazione per le partecipazioni (fetch EAGER per includerle nella risposta JSON)
+    @OneToMany(mappedBy = "concorso", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonManagedReference
+    private List<ContestEntry> partecipazioni;
+
     public Contest() {}
 
-    // Costruttore completo
-    public Contest(String titolo, String obiettivo, String descrizione, LocalDate dataInizio, LocalDate dataFine, Users organizzatore, ContestStatus status) {
+    public Contest(String titolo, String descrizione, LocalDateTime dataInizio, LocalDateTime dataFine, boolean invitazionale, List<Long> invitedUserIds, Users creatore) {
         this.titolo = titolo;
-        this.obiettivo = obiettivo;
         this.descrizione = descrizione;
         this.dataInizio = dataInizio;
         this.dataFine = dataFine;
-        this.organizzatore = organizzatore;
-        this.status = status;
+        this.invitazionale = invitazionale;
+        this.invitedUserIds = invitedUserIds;
+        this.creatore = creatore;
+        this.stato = StatoConcorso.BOZZA;
     }
 
     // Getters e Setters
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getTitolo() {
-        return titolo;
-    }
-
-    public void setTitolo(String titolo) {
-        this.titolo = titolo;
-    }
-
-    public String getObiettivo() {
-        return obiettivo;
-    }
-
-    public void setObiettivo(String obiettivo) {
-        this.obiettivo = obiettivo;
-    }
-
-    public String getDescrizione() {
-        return descrizione;
-    }
-
-    public void setDescrizione(String descrizione) {
-        this.descrizione = descrizione;
-    }
-
-    public LocalDate getDataInizio() {
-        return dataInizio;
-    }
-
-    public void setDataInizio(LocalDate dataInizio) {
-        this.dataInizio = dataInizio;
-    }
-
-    public LocalDate getDataFine() {
-        return dataFine;
-    }
-
-    public void setDataFine(LocalDate dataFine) {
-        this.dataFine = dataFine;
-    }
-
-    public Users getOrganizzatore() {
-        return organizzatore;
-    }
-
-    public void setOrganizzatore(Users organizzatore) {
-        this.organizzatore = organizzatore;
-    }
-
-    public ContestStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ContestStatus status) {
-        this.status = status;
-    }
-
-    public Set<Users> getPartecipanti() {
-        return partecipanti;
-    }
-
-    public void setPartecipanti(Set<Users> partecipanti) {
-        this.partecipanti = partecipanti;
-    }
-
-    public void addPartecipante(Users user) {
-        this.partecipanti.add(user);
-    }
+    public Long getId() { return id; }
+    public String getTitolo() { return titolo; }
+    public void setTitolo(String titolo) { this.titolo = titolo; }
+    public String getDescrizione() { return descrizione; }
+    public void setDescrizione(String descrizione) { this.descrizione = descrizione; }
+    public LocalDateTime getDataInizio() { return dataInizio; }
+    public void setDataInizio(LocalDateTime dataInizio) { this.dataInizio = dataInizio; }
+    public LocalDateTime getDataFine() { return dataFine; }
+    public void setDataFine(LocalDateTime dataFine) { this.dataFine = dataFine; }
+    public StatoConcorso getStato() { return stato; }
+    public void setStato(StatoConcorso stato) { this.stato = stato; }
+    public boolean isInvitazionale() { return invitazionale; }
+    public void setInvitazionale(boolean invitazionale) { this.invitazionale = invitazionale; }
+    public List<Long> getInvitedUserIds() { return invitedUserIds; }
+    public void setInvitedUserIds(List<Long> invitedUserIds) { this.invitedUserIds = invitedUserIds; }
+    public Users getCreatore() { return creatore; }
+    public void setCreatore(Users creatore) { this.creatore = creatore; }
+    public List<ContestEntry> getPartecipazioni() { return partecipazioni; }
+    public void setPartecipazioni(List<ContestEntry> partecipazioni) { this.partecipazioni = partecipazioni; }
 }
