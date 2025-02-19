@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/users/all").permitAll()
                         .requestMatchers(HttpMethod.GET, "/poi/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/journeys/**").permitAll()
                         .requestMatchers("/users/create-user").hasAuthority("CREATE_USERS")
                         .requestMatchers("/users/approve-contributor/**").hasAuthority("APPROVE_CONTRIBUTORS")
                         .anyRequest().authenticated()

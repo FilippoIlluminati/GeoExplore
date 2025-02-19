@@ -1,7 +1,7 @@
 package Geoexplore.Controller;
 
 import Geoexplore.Journey.Journey;
-import Geoexplore.Journey.JourneyManager;
+import Geoexplore.Journey.JourneyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,65 +12,76 @@ import java.util.Optional;
 @RequestMapping("/journeys")
 public class JourneyController {
 
-    private final JourneyManager journeyManager;
-
     @Autowired
-    public JourneyController(JourneyManager journeyManager) {
-        this.journeyManager = journeyManager;
-    }
+    private JourneyService journeyService;
 
     // Crea un nuovo Journey
     @PostMapping
-    public ResponseEntity<Journey> createJourney(@RequestBody Journey journey) {
-        Journey savedJourney = journeyManager.saveJourney(journey);
-        return ResponseEntity.ok(savedJourney);
+    public ResponseEntity<?> createJourney(@RequestBody Journey journey) {
+        try {
+            Journey savedJourney = journeyService.createJourney(journey);
+            return ResponseEntity.ok(savedJourney);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // Recupera tutti i Journey
     @GetMapping
     public ResponseEntity<List<Journey>> getAllJourneys() {
-        List<Journey> journeys = journeyManager.getAllJourneys();
+        List<Journey> journeys = journeyService.getAllJourneys();
         return ResponseEntity.ok(journeys);
     }
 
     // Recupera un Journey per ID
     @GetMapping("/{id}")
     public ResponseEntity<Journey> getJourneyById(@PathVariable Long id) {
-        Optional<Journey> journey = journeyManager.getJourneyById(id);
+        Optional<Journey> journey = journeyService.getJourneyById(id);
         return journey.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     // Aggiorna un Journey esistente
     @PutMapping("/{id}")
-    public ResponseEntity<Journey> updateJourney(@PathVariable Long id, @RequestBody Journey journeyDetails) {
+    public ResponseEntity<?> updateJourney(@PathVariable Long id, @RequestBody Journey journeyDetails) {
         try {
-            Journey updatedJourney = journeyManager.updateJourney(id, journeyDetails);
+            Journey updatedJourney = journeyService.updateJourney(id, journeyDetails);
             return ResponseEntity.ok(updatedJourney);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     // Elimina un Journey per ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteJourney(@PathVariable Long id) {
-        if (journeyManager.getJourneyById(id).isPresent()) {
-            journeyManager.deleteJourney(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } else {
-            return ResponseEntity.notFound().build(); // 404 Not Found
+    public ResponseEntity<?> deleteJourney(@PathVariable Long id) {
+        try {
+            journeyService.deleteJourney(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // Endpoint per confermare un Journey
-    @PutMapping("/{id}/confirm")
-    public ResponseEntity<Journey> confirmJourney(@PathVariable Long id) {
+    // Approva un Journey (solo dal curatore)
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<?> approveJourney(@PathVariable Long id) {
         try {
-            Journey confirmedJourney = journeyManager.confirmJourney(id);
-            return ResponseEntity.ok(confirmedJourney);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            Journey approvedJourney = journeyService.approveJourney(id);
+            return ResponseEntity.ok(approvedJourney);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // Rifiuta un Journey (solo dal curatore, il journey viene eliminato)
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<?> rejectJourney(@PathVariable Long id) {
+        try {
+            journeyService.rejectJourney(id);
+            return ResponseEntity.ok("Journey rifiutato ed eliminato");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

@@ -1,8 +1,8 @@
 package Geoexplore.Journey;
 
 import Geoexplore.User.Users;
+import Geoexplore.POI.POI;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -25,19 +25,27 @@ public class Journey {
     @JsonIgnoreProperties("journeys")
     private Users creator;
 
-
-    @OneToMany(mappedBy = "journey", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private List<Stop> stops;
-
-    // Indica se il journey è stato confermato
+    // Stato di conferma (approvazione)
     private boolean confermato = false;
+
+    // Indica se il journey è ordinato (true) o non ordinato (false)
+    private boolean ordinato;
+
+    // Lista dei POI associati – utilizziamo FetchType.EAGER per caricare tutti i dati dei POI
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "journey_poi",
+            joinColumns = @JoinColumn(name = "journey_id"),
+            inverseJoinColumns = @JoinColumn(name = "poi_id")
+    )
+    @OrderColumn(name = "sequence")
+    private List<POI> poiList;
 
     // Costruttore vuoto richiesto da JPA
     public Journey() {
     }
 
-    // Costruttore con parametri
+    // Costruttore con parametri (senza poiList e ordinato, da impostare separatamente)
     public Journey(String nome, String descrizione, Users creator) {
         this.nome = nome;
         this.descrizione = descrizione;
@@ -74,19 +82,27 @@ public class Journey {
         this.creator = creator;
     }
 
-    public List<Stop> getStops() {
-        return stops;
-    }
-
-    public void setStops(List<Stop> stops) {
-        this.stops = stops;
-    }
-
     public boolean isConfermato() {
         return confermato;
     }
 
     public void setConfermato(boolean confermato) {
         this.confermato = confermato;
+    }
+
+    public boolean isOrdinato() {
+        return ordinato;
+    }
+
+    public void setOrdinato(boolean ordinato) {
+        this.ordinato = ordinato;
+    }
+
+    public List<POI> getPoiList() {
+        return poiList;
+    }
+
+    public void setPoiList(List<POI> poiList) {
+        this.poiList = poiList;
     }
 }
