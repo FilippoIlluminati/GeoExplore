@@ -81,7 +81,7 @@ public class POIService {
         return poiRepository.save(poi);
     }
 
-    // Aggiornamento del POI: può essere aggiornato solo dal CURATORE o dal creatore del POI
+    // Aggiornamento del POI: può essere aggiornato solo dal creatore del POI
     public POI updatePOI(Long id, POI updatedPOI) {
         Users currentUser = getAuthenticatedUser();
         Optional<POI> optionalPOI = poiRepository.findById(id);
@@ -89,10 +89,9 @@ public class POIService {
             throw new RuntimeException("POI non trovato con id " + id);
         }
         POI existingPOI = optionalPOI.get();
-        // Controllo: se l'utente non è CURATORE e non è il creatore, l'operazione è vietata
-        if (currentUser.getRuolo() != UserRole.CURATORE &&
-                !existingPOI.getCreator().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Solo il curatore o il creatore del POI possono modificarlo");
+        // Controllo: solo il creatore può aggiornare il POI
+        if (!existingPOI.getCreator().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Solo il creatore del POI può modificarlo");
         }
         // Verifica che le nuove coordinate siano nel range consentito
         if (!isWithinAllowedArea(updatedPOI.getLatitude(), updatedPOI.getLongitude())) {
@@ -108,7 +107,7 @@ public class POIService {
         return poiRepository.save(existingPOI);
     }
 
-    // Eliminazione del POI: può essere eliminato solo dal CURATORE o dal creatore del POI
+    // Eliminazione del POI: può essere eliminato solo dal creatore del POI
     public void deletePOI(Long id) {
         Users currentUser = getAuthenticatedUser();
         Optional<POI> optionalPOI = poiRepository.findById(id);
@@ -116,10 +115,9 @@ public class POIService {
             throw new RuntimeException("POI non trovato con id " + id);
         }
         POI poi = optionalPOI.get();
-        // Controllo: se l'utente non è CURATORE e non è il creatore, l'operazione è vietata
-        if (currentUser.getRuolo() != UserRole.CURATORE &&
-                !poi.getCreator().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Solo il curatore o il creatore del POI possono eliminarlo");
+        // Controllo: solo il creatore può eliminare il POI
+        if (!poi.getCreator().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Solo il creatore del POI può eliminarlo");
         }
         poiRepository.deleteById(id);
     }
@@ -141,12 +139,25 @@ public class POIService {
             throw new RuntimeException("Solo il curatore può approvare i POI");
         }
         Optional<POI> optionalPOI = poiRepository.findById(id);
-        if(optionalPOI.isPresent()) {
+        if (optionalPOI.isPresent()) {
             POI poi = optionalPOI.get();
             poi.setApprovato(true);
             return poiRepository.save(poi);
         } else {
             throw new RuntimeException("POI non trovato con id " + id);
         }
+    }
+
+    // Rifiuto del POI: può essere rifiutato solo dal CURATORE; in caso di rifiuto, il POI viene eliminato
+    public void rejectPOI(Long id) {
+        Users currentUser = getAuthenticatedUser();
+        if (currentUser.getRuolo() != UserRole.CURATORE) {
+            throw new RuntimeException("Solo il curatore può rifiutare i POI");
+        }
+        Optional<POI> optionalPOI = poiRepository.findById(id);
+        if (optionalPOI.isEmpty()) {
+            throw new RuntimeException("POI non trovato con id " + id);
+        }
+        poiRepository.deleteById(id);
     }
 }

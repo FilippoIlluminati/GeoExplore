@@ -28,7 +28,7 @@ public class POIController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Creazione del POI con gestione dell'errore
+    // Endpoint per la creazione del POI
     @PostMapping
     public ResponseEntity<?> createPOI(@RequestBody POI poi) {
         try {
@@ -39,7 +39,8 @@ public class POIController {
         }
     }
 
-    // Aggiornamento del POI con gestione dell'errore
+    // Endpoint per l'aggiornamento del POI
+    // (Solo il creatore del POI può modificarlo)
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePOI(@PathVariable Long id, @RequestBody POI poi) {
         try {
@@ -50,19 +51,38 @@ public class POIController {
         }
     }
 
+    // Endpoint per l'eliminazione del POI
+    // (Solo il creatore del POI può eliminarlo)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePOI(@PathVariable Long id) {
-        poiService.deletePOI(id);
-        return ResponseEntity.noContent().build();
+        try {
+            poiService.deletePOI(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
+    // Endpoint per l'approvazione del POI (solo il curatore può approvare)
     @PutMapping("/{id}/approve")
     public ResponseEntity<POI> approvePOI(@PathVariable Long id) {
         try {
             POI approvedPOI = poiService.approvePOI(id);
             return ResponseEntity.ok(approvedPOI);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().build();
         }
     }
-}
+
+    // Nuovo endpoint per il rifiuto del POI (solo il curatore può rifiutare)
+    // In caso di rifiuto il POI viene eliminato
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<?> rejectPOI(@PathVariable Long id) {
+        try {
+            poiService.rejectPOI(id);
+            return ResponseEntity.ok("POI rifiutato ed eliminato");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+ }
