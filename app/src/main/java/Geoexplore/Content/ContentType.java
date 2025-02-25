@@ -1,6 +1,7 @@
 package Geoexplore.Content;
 
 public enum ContentType {
-    POI,
-    GENERIC
+    POI,       // Contenuto associato a un POI
+    GENERIC,   // Contenuto generico
+    CONTEST    // Contenuto legato a un contest (se necessario)
 }

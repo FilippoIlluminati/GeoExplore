@@ -1,11 +1,14 @@
 package Geoexplore.Content;
 
+import Geoexplore.POI.POI;
+import Geoexplore.POI.POIRepository;
 import Geoexplore.User.UserRepository;
+import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ContentService {
@@ -14,97 +17,100 @@ public class ContentService {
     private ContentRepository contentRepository;
 
     @Autowired
-    private ApprovalRepository approvalRepository;
+    private POIRepository poiRepository;
 
     @Autowired
     private UserRepository userRepository;
 
-    // Recupera tutti i contenuti
+    // Crea un nuovo contenuto associato a un POI; il creatorId identifica l'utente che crea il contenuto
+    public Content createContent(Content content, Long poiId, Long creatorId) {
+        POI poi = poiRepository.findById(poiId)
+                .orElseThrow(() -> new RuntimeException("POI non trovato."));
+
+        Users creator = userRepository.findById(creatorId)
+                .orElseThrow(() -> new RuntimeException("Creator non trovato."));
+
+        if (!puoCreareContenuti(creator.getRuolo())) {
+            throw new SecurityException("Il ruolo " + creator.getRuolo() + " non può creare contenuti.");
+        }
+
+        content.setPoi(poi);
+        content.setDataCreazione(LocalDateTime.now());
+
+        // Se il creatore è CONTRIBUTOR o TURISTA_AUTENTICATO, il contenuto va in attesa di approvazione.
+        // Se il creatore è CONTRIBUTOR_AUTORIZZATO o CURATORE, il contenuto viene salvato già come approvato.
+        switch (creator.getRuolo()) {
+            case TURISTA_AUTENTICATO:
+            case CONTRIBUTOR:
+                content.setStatus(ContentStatus.IN_ATTESA);
+                break;
+            case CONTRIBUTOR_AUTORIZZATO:
+            case CURATORE:
+                content.setStatus(ContentStatus.APPROVATO);
+                break;
+            default:
+                content.setStatus(ContentStatus.IN_ATTESA);
+        }
+
+        return contentRepository.save(content);
+    }
+
+    public List<Content> getContentsByPOI(Long poiId) {
+        return contentRepository.findByPoiId(poiId);
+    }
+
+    public Content approveContent(Long contentId, Long validatorId) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new RuntimeException("Content non trovato."));
+
+        Users validator = userRepository.findById(validatorId)
+                .orElseThrow(() -> new RuntimeException("Validator non trovato."));
+
+        if (!(validator.getRuolo() == UserRole.CURATORE || validator.getRuolo() == UserRole.ANIMATORE)) {
+            throw new SecurityException("Solo Curatore o Animatore possono approvare i contenuti.");
+        }
+
+        if (content.getStatus() != ContentStatus.IN_ATTESA) {
+            throw new IllegalStateException("Content non in stato IN_ATTESA.");
+        }
+
+        content.setStatus(ContentStatus.APPROVATO);
+        return contentRepository.save(content);
+    }
+
+    public Content rejectContent(Long contentId, Long validatorId) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new RuntimeException("Content non trovato."));
+
+        Users validator = userRepository.findById(validatorId)
+                .orElseThrow(() -> new RuntimeException("Validator non trovato."));
+
+        if (!(validator.getRuolo() == UserRole.CURATORE || validator.getRuolo() == UserRole.ANIMATORE)) {
+            throw new SecurityException("Solo Curatore o Animatore possono rifiutare i contenuti.");
+        }
+
+        if (content.getStatus() != ContentStatus.IN_ATTESA) {
+            throw new IllegalStateException("Content non in stato IN_ATTESA.");
+        }
+
+        content.setStatus(ContentStatus.RIFIUTATO);
+        return contentRepository.save(content);
+    }
+
     public List<Content> getAllContents() {
         return contentRepository.findAll();
     }
 
-    // Recupera i contenuti approvati (con approval e isApproved true)
-    public List<Content> getApprovedContents() {
-        return contentRepository.findAll().stream()
-                .filter(c -> c.getApproval() != null && Boolean.TRUE.equals(c.getApproval().getIsApproved()))
-                .toList();
-    }
-
-    // Recupera i contenuti in attesa di approvazione
-    public List<Content> getPendingContents() {
-        return contentRepository.findAll().stream()
-                .filter(c -> c.getApproval() == null || !Boolean.TRUE.equals(c.getApproval().getIsApproved()))
-                .toList();
-    }
-
-    // Recupera un contenuto per ID
-    public Optional<Content> getContentById(Long id) {
-        return contentRepository.findById(id);
-    }
-
-    // Crea un nuovo contenuto (sia generico che associato a un POI)
-    public Content createContent(Content content) {
-        Long creatorId = content.getCreator().getId();
-        Users creator = userRepository.findById(creatorId)
-                .orElseThrow(() -> new RuntimeException("Utente creatore non trovato con id: " + creatorId));
-
-        // Verifica che il creatore abbia il permesso di caricare contenuti
-        if (!creator.getRuolo().getPermissions().contains("UPLOAD_CONTENT")) {
-            throw new RuntimeException("L'utente non ha il permesso di caricare contenuti");
+    private boolean puoCreareContenuti(UserRole ruolo) {
+        switch (ruolo) {
+            case TURISTA_AUTENTICATO:
+            case CONTRIBUTOR:
+            case CONTRIBUTOR_AUTORIZZATO:
+            case CURATORE:
+            case ANIMATORE:
+                return true;
+            default:
+                return false;
         }
-        content.setCreator(creator);
-
-        // Se contentType è nullo, lo imposta automaticamente in base alla presenza di un POI
-        if (content.getContentType() == null) {
-            content.setContentType(content.getPoi() != null ? ContentType.POI : ContentType.GENERIC);
-        }
-        content.setApproval(null);
-        return contentRepository.save(content);
-    }
-
-    // Aggiorna un contenuto esistente
-    public Content updateContent(Long id, Content contentDetails) {
-        return contentRepository.findById(id).map(content -> {
-            content.setTitolo(contentDetails.getTitolo());
-            content.setDescrizione(contentDetails.getDescrizione());
-            content.setPoi(contentDetails.getPoi());
-            Long creatorId = contentDetails.getCreator().getId();
-            Users creator = userRepository.findById(creatorId)
-                    .orElseThrow(() -> new RuntimeException("Utente creatore non trovato con id: " + creatorId));
-            content.setCreator(creator);
-            content.setContentType((content.getPoi() != null) ? ContentType.POI : ContentType.GENERIC);
-            return contentRepository.save(content);
-        }).orElseThrow(() -> new RuntimeException("Contenuto non trovato"));
-    }
-
-    // Elimina un contenuto
-    public void deleteContent(Long id) {
-        contentRepository.deleteById(id);
-    }
-
-    // Approva un contenuto: l'utente approvatore deve avere i permessi VALIDATE_CONTENT o MANAGE_CONTENT
-    public Content approveContent(Long contentId, Long approverId) {
-        Content content = contentRepository.findById(contentId)
-                .orElseThrow(() -> new RuntimeException("Contenuto non trovato"));
-
-        Users approver = userRepository.findById(approverId)
-                .orElseThrow(() -> new RuntimeException("Utente approvatore non trovato"));
-
-        if (!approver.getRuolo().getPermissions().contains("VALIDATE_CONTENT") &&
-                !approver.getRuolo().getPermissions().contains("MANAGE_CONTENT")) {
-            throw new RuntimeException("L'utente non ha il permesso di approvare contenuti");
-        }
-
-        Approval approval = content.getApproval();
-        if (approval == null) {
-            approval = new Approval(content, approver, true);
-            content.setApproval(approval);
-        } else {
-            approval.setApprover(approver);
-            approval.setIsApproved(true);
-        }
-        approvalRepository.save(approval);
-        return contentRepository.save(content);
     }
 }

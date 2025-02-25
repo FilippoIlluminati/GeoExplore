@@ -1,86 +1,61 @@
 package Geoexplore.Controller;
 
-import Geoexplore.Content.Content;
-import Geoexplore.Content.ContentService;
+import Geoexplore.Content.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
-@RequestMapping("/contents")
+@RequestMapping("/content")
 public class ContentController {
 
     @Autowired
     private ContentService contentService;
 
-    // Crea un nuovo contenuto
-    @PostMapping
-    public ResponseEntity<?> createContent(@RequestBody Content content) {
-        try {
-            Content savedContent = contentService.createContent(content);
-            return ResponseEntity.ok(savedContent);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    // Crea un nuovo contenuto associato a un POI
+    // Parametri: poiId e creatorId per identificare il POI e chi crea il contenuto
+    @PostMapping("/create")
+    public ResponseEntity<?> createContent(
+            @RequestBody Content content,
+            @RequestParam Long poiId,
+            @RequestParam Long creatorId) {
+
+        Content saved = contentService.createContent(content, poiId, creatorId);
+        return ResponseEntity.ok("Content creato con successo. ID: " + saved.getId() +
+                " Stato: " + saved.getStatus());
     }
 
-    // Recupera tutti i contenuti
-    @GetMapping
-    public ResponseEntity<List<Content>> getAllContents() {
-        List<Content> contents = contentService.getAllContents();
+    // Ottiene i contenuti associati a un POI
+    @GetMapping("/poi/{poiId}")
+    public ResponseEntity<?> getContentsByPOI(@PathVariable Long poiId) {
+        List<Content> contents = contentService.getContentsByPOI(poiId);
         return ResponseEntity.ok(contents);
     }
 
-    // Recupera un contenuto per ID
-    @GetMapping("/{id}")
-    public ResponseEntity<Content> getContentById(@PathVariable Long id) {
-        Optional<Content> contentOpt = contentService.getContentById(id);
-        return contentOpt.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    // Approva un contenuto (validatorId deve essere di un utente con ruolo CURATORE o ANIMATORE)
+    @PatchMapping("/{contentId}/approve")
+    public ResponseEntity<?> approveContent(
+            @PathVariable Long contentId,
+            @RequestParam Long validatorId) {
+
+        Content updated = contentService.approveContent(contentId, validatorId);
+        return ResponseEntity.ok("Content approvato. ID: " + updated.getId());
     }
 
-    // Aggiorna un contenuto esistente
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateContent(@PathVariable Long id, @RequestBody Content content) {
-        try {
-            Content updatedContent = contentService.updateContent(id, content);
-            return ResponseEntity.ok(updatedContent);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    // Rifiuta un contenuto
+    @PatchMapping("/{contentId}/reject")
+    public ResponseEntity<?> rejectContent(
+            @PathVariable Long contentId,
+            @RequestParam Long validatorId) {
+
+        Content updated = contentService.rejectContent(contentId, validatorId);
+        return ResponseEntity.ok("Content rifiutato. ID: " + updated.getId());
     }
 
-    // Elimina un contenuto
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteContent(@PathVariable Long id) {
-        contentService.deleteContent(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    // Recupera i contenuti approvati
-    @GetMapping("/approved")
-    public ResponseEntity<List<Content>> getApprovedContents() {
-        List<Content> approvedContents = contentService.getApprovedContents();
-        return ResponseEntity.ok(approvedContents);
-    }
-
-    // Recupera i contenuti in attesa di approvazione
-    @GetMapping("/pending")
-    public ResponseEntity<List<Content>> getPendingContents() {
-        List<Content> pendingContents = contentService.getPendingContents();
-        return ResponseEntity.ok(pendingContents);
-    }
-
-    // Approva un contenuto: endpoint /contents/{contentId}/approve/{approverId}
-    @PutMapping("/{contentId}/approve/{approverId}")
-    public ResponseEntity<?> approveContent(@PathVariable Long contentId, @PathVariable Long approverId) {
-        try {
-            Content approvedContent = contentService.approveContent(contentId, approverId);
-            return ResponseEntity.ok(approvedContent);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    // Ottiene tutti i contenuti
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllContents() {
+        return ResponseEntity.ok(contentService.getAllContents());
     }
 }
