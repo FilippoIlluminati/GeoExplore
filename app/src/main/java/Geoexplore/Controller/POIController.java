@@ -7,6 +7,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/poi")
@@ -82,6 +83,17 @@ public class POIController {
             poiService.rejectPOI(id);
             return ResponseEntity.ok("POI rifiutato ed eliminato");
         } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // Nuovo endpoint: recupera la lista dei POI salvati dall'utente autenticato
+    @GetMapping("/saved")
+    public ResponseEntity<?> getSavedPOIs() {
+        try {
+            Set<POI> savedPois = poiService.getSavedPOIsForTurista();
+            return ResponseEntity.ok(savedPois);
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

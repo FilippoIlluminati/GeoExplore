@@ -90,7 +90,7 @@ public class JourneyService {
     }
 
     // Aggiorna un journey esistente:
-    // Solo il creatore può modificarlo e solo se il journey non è già approvato.
+    // Solo il creatore può modificarlo.
     public Journey updateJourney(Long id, Journey journeyDetails) {
         Users currentUser = getAuthenticatedUser();
         return journeyRepository.findById(id).map(journey -> {
@@ -145,8 +145,8 @@ public class JourneyService {
     // Solo il curatore (CURATORE) può approvare un journey.
     public Journey approveJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
-        if (currentUser.getRuolo() != UserRole.CURATORE) {
-            throw new RuntimeException("Solo il curatore può approvare i journey");
+        if (currentUser.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            throw new RuntimeException("Solo il gestore della piattaforma può approvare i POI");
         }
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
         if (optionalJourney.isEmpty()) {
@@ -161,8 +161,8 @@ public class JourneyService {
     // Solo il curatore (CURATORE) può rifiutare un journey; in tal caso il journey viene eliminato.
     public void rejectJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
-        if (currentUser.getRuolo() != UserRole.CURATORE) {
-            throw new RuntimeException("Solo il curatore può rifiutare i journey");
+        if (currentUser.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            throw new RuntimeException("Solo il gestore della piattaforma può rifiutare i POI");
         }
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
         if (optionalJourney.isEmpty()) {

@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class POIService {
@@ -132,11 +133,11 @@ public class POIService {
         return poiRepository.findAll();
     }
 
-    // Approvazione del POI: può essere approvato solo dal CURATORE
+    // Approvazione del POI: ora può essere approvato solo dal GESTORE_PIATTAFORMA
     public POI approvePOI(Long id) {
         Users currentUser = getAuthenticatedUser();
-        if (currentUser.getRuolo() != UserRole.CURATORE) {
-            throw new RuntimeException("Solo il curatore può approvare i POI");
+        if (currentUser.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            throw new RuntimeException("Solo il gestore della piattaforma può approvare i POI");
         }
         Optional<POI> optionalPOI = poiRepository.findById(id);
         if (optionalPOI.isPresent()) {
@@ -148,16 +149,40 @@ public class POIService {
         }
     }
 
-    // Rifiuto del POI: può essere rifiutato solo dal CURATORE; in caso di rifiuto, il POI viene eliminato
+    // Rifiuto del POI: può essere rifiutato solo dal GESTORE_PIATTAFORMA; in caso di rifiuto, il POI viene eliminato
     public void rejectPOI(Long id) {
         Users currentUser = getAuthenticatedUser();
-        if (currentUser.getRuolo() != UserRole.CURATORE) {
-            throw new RuntimeException("Solo il curatore può rifiutare i POI");
+        if (currentUser.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            throw new RuntimeException("Solo il gestore della piattaforma può rifiutare i POI");
         }
         Optional<POI> optionalPOI = poiRepository.findById(id);
         if (optionalPOI.isEmpty()) {
             throw new RuntimeException("POI non trovato con id " + id);
         }
         poiRepository.deleteById(id);
+    }
+    // Solo gli utenti con ruolo TURISTA_AUTENTICATO possono salvare POI per visite future
+    public Users savePOIForTurista(Long poiId) {
+        Users currentUser = getAuthenticatedUser();
+        if (currentUser.getRuolo() != UserRole.TURISTA_AUTENTICATO) {
+            throw new RuntimeException("Solo i Turista Autenticati possono salvare POI per visite future");
+        }
+        Optional<POI> poiOpt = poiRepository.findById(poiId);
+        if (poiOpt.isEmpty()) {
+            throw new RuntimeException("POI non trovato con id " + poiId);
+        }
+        POI poi = poiOpt.get();
+        // Aggiungi il POI alla lista dei POI salvati dall'utente
+        currentUser.getSavedPois().add(poi);
+        return userRepository.save(currentUser);
+    }
+
+    // Nuovo metodo: recupera la lista dei POI salvati dall'utente autenticato
+    public Set<POI> getSavedPOIsForTurista() {
+        Users currentUser = getAuthenticatedUser();
+        if (currentUser.getRuolo() != UserRole.TURISTA_AUTENTICATO) {
+            throw new RuntimeException("Solo i Turista Autenticati possono avere POI salvati");
+        }
+        return currentUser.getSavedPois();
     }
 }

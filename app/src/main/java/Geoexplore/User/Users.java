@@ -1,7 +1,10 @@
 package Geoexplore.User;
 
+import Geoexplore.POI.POI;
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -16,7 +19,7 @@ public class Users {
     private String email;
     private String username;
 
-    // Usare JsonProperty per permettere la deserializzazione della password (senza mostrarla nelle risposte)
+    // Permette la deserializzazione della password senza mostrarla nelle risposte
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
@@ -25,6 +28,15 @@ public class Users {
 
     @Enumerated(EnumType.STRING)
     private AccountStatus accountStatus = AccountStatus.IN_ATTESA;
+
+    // Relazione ManyToMany per i POI salvati (per visite future)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "saved_pois",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "poi_id")
+    )
+    private Set<POI> savedPois = new HashSet<>();
 
     // Costruttore vuoto (necessario per JPA)
     public Users() {}
@@ -71,4 +83,13 @@ public class Users {
     public void setRuolo(UserRole ruolo) { this.ruolo = ruolo; }
     public AccountStatus getAccountStatus() { return accountStatus; }
     public void setAccountStatus(AccountStatus accountStatus) { this.accountStatus = accountStatus; }
+
+    // Getters e Setters per i POI salvati
+    public Set<POI> getSavedPois() {
+        return savedPois;
+    }
+
+    public void setSavedPois(Set<POI> savedPois) {
+        this.savedPois = savedPois;
+    }
 }
