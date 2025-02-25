@@ -37,12 +37,9 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/users/all").permitAll()
                         .requestMatchers(HttpMethod.GET, "/poi/**").permitAll()
-<<<<<<< Updated upstream
                         .requestMatchers(HttpMethod.GET, "/journeys/**").permitAll()
-=======
-                        // Aggiungi qui per permettere GET sui contenuti:
+                        // Permetto anche le richieste GET sui contenuti
                         .requestMatchers(HttpMethod.GET, "/content/**").permitAll()
->>>>>>> Stashed changes
                         .requestMatchers("/users/create-user").hasAuthority("CREATE_USERS")
                         .requestMatchers("/users/approve-contributor/**").hasAuthority("APPROVE_CONTRIBUTORS")
                         .anyRequest().authenticated()
