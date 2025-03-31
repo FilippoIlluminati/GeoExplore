@@ -4,6 +4,7 @@ import Geoexplore.Report.Report;
 import Geoexplore.Report.ReportManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +23,15 @@ public class ReportController {
 
     // Crea un nuovo Report
     @PostMapping
-    public ResponseEntity<Report> createReport(@RequestBody Report report) {
+    public ResponseEntity<Report> createReport(@RequestBody Report report, Authentication authentication) {
+        // Se l'utente è autenticato, imposta automaticamente il reporter
+        if (authentication != null && authentication.isAuthenticated()) {
+            // Supponendo che il principal sia un'istanza di Users
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof Geoexplore.User.Users) {
+                report.setReporter((Geoexplore.User.Users) principal);
+            }
+        }
         Report savedReport = reportManager.saveReport(report);
         return ResponseEntity.ok(savedReport);
     }

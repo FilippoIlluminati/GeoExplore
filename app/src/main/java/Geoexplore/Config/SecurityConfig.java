@@ -40,6 +40,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/journeys/**").permitAll()
                         // Permetto anche le richieste GET sui contenuti
                         .requestMatchers(HttpMethod.GET, "/content/**").permitAll()
+                        // Permetto l'accesso a /reports per GET e POST, anche a utenti non autenticati
+                        .requestMatchers(HttpMethod.GET, "/reports/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/reports").permitAll()
                         .requestMatchers("/users/create-user").hasAuthority("CREATE_USERS")
                         .requestMatchers("/users/approve-contributor/**").hasAuthority("APPROVE_CONTRIBUTORS")
                         .anyRequest().authenticated()

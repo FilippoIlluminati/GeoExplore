@@ -18,13 +18,13 @@ public class Report {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String descrizione;
 
-    // Sostituisci la relazione con Stop con quella con POI
     @ManyToOne
     @JoinColumn(name = "poiID", nullable = false)
     private POI poi;
 
+    // Modifica: permettiamo reporter null se il report è anonimo
     @ManyToOne
-    @JoinColumn(name = "reporterID", nullable = false)
+    @JoinColumn(name = "reporterID", nullable = true)
     private Users reporter;
 
     // Costruttore vuoto richiesto da JPA
@@ -80,4 +80,3 @@ public class Report {
         this.reporter = reporter;
     }
 }
-
