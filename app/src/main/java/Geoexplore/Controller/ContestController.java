@@ -90,4 +90,18 @@ public class ContestController {
         }
         return ResponseEntity.ok(contestService.getConcorsiByStato(s));
     }
+
+    // Endpoint per recuperare un concorso per ID
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getContestById(@PathVariable Long id) {
+        Contest contest = contestService.getContestById(id);
+        return ResponseEntity.ok(contest);
+    }
+
+    // Nuovo endpoint: Recupera tutte le partecipazioni per i concorsi creati da un Animatore
+    @GetMapping("/animator/{animatoreId}/partecipazioni")
+    public ResponseEntity<?> getPartecipazioniByAnimatore(@PathVariable Long animatoreId) {
+        List<ContestEntry> partecipazioni = contestService.getPartecipazioniPerAnimatore(animatoreId);
+        return ResponseEntity.ok(partecipazioni);
+    }
 }

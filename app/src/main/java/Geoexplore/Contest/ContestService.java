@@ -5,7 +5,9 @@ import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ContestService {
@@ -44,7 +46,6 @@ public class ContestService {
         }
         Users partecipante = userRepository.findById(partecipanteId)
                 .orElseThrow(() -> new RuntimeException("Partecipante non trovato."));
-        // Se il payload è nullo o il contenuto è null, impostalo a stringa vuota
         if (partecipazione == null) {
             partecipazione = new ContestEntry();
         }
@@ -102,5 +103,29 @@ public class ContestService {
     // Recupera concorsi filtrati per stato
     public List<Contest> getConcorsiByStato(StatoConcorso stato) {
         return contestRepository.findByStato(stato);
+    }
+
+    // Recupera un concorso per ID
+    public Contest getContestById(Long id) {
+        return contestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Concorso non trovato con ID: " + id));
+    }
+
+    // Recupera tutte le partecipazioni dai concorsi creati da un Animatore
+    public List<ContestEntry> getPartecipazioniPerAnimatore(Long animatoreId) {
+        // Recupera i concorsi creati dall'animatore
+        List<Contest> concorsiCreati = contestRepository.findAll()
+                .stream()
+                .filter(c -> c.getCreatore() != null && c.getCreatore().getId().equals(animatoreId))
+                .collect(Collectors.toList());
+
+        // Aggrega tutte le partecipazioni dai concorsi trovati
+        List<ContestEntry> tuttePartecipazioni = new ArrayList<>();
+        for (Contest concorso : concorsiCreati) {
+            if (concorso.getPartecipazioni() != null) {
+                tuttePartecipazioni.addAll(concorso.getPartecipazioni());
+            }
+        }
+        return tuttePartecipazioni;
     }
 }
