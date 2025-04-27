@@ -5,6 +5,7 @@ import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -12,16 +13,11 @@ import java.util.stream.Collectors;
 @Service
 public class ContestService {
 
-    @Autowired
-    private ContestRepository contestRepository;
+    @Autowired private ContestRepository contestRepository;
+    @Autowired private ContestEntryRepository contestEntryRepository;
+    @Autowired private UserRepository userRepository;
 
-    @Autowired
-    private ContestEntryRepository contestEntryRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    // Creazione di un concorso da parte di un Animatore
+    // 1) Creazione concorso (Animatore)
     public Contest creaConcorso(Contest concorso, Long creatoreId) {
         Users creatore = userRepository.findById(creatoreId)
                 .orElseThrow(() -> new RuntimeException("Creatore non trovato."));
@@ -33,99 +29,108 @@ public class ContestService {
         return contestRepository.save(concorso);
     }
 
-    // Partecipazione ad un concorso (il contenuto è opzionale)
-    public ContestEntry partecipaAlConcorso(Long concorsoId, ContestEntry partecipazione, Long partecipanteId) {
+    // 2) Partecipazione al concorso (CONTENT vuoto, sempre IN_ATTESA)
+    public ContestEntry partecipaAlConcorso(Long concorsoId,
+                                            ContestEntry partecipazione,
+                                            Long partecipanteId) {
         Contest concorso = contestRepository.findById(concorsoId)
                 .orElseThrow(() -> new RuntimeException("Concorso non trovato."));
-        // Se il concorso è invitazionale, controlla che l'utente sia invitato
-        if (concorso.isInvitazionale()) {
-            List<Long> invitati = concorso.getInvitedUserIds();
-            if (invitati == null || !invitati.contains(partecipanteId)) {
-                throw new SecurityException("Questo concorso è su invito e l'utente non è invitato.");
-            }
+        // controllo inviti
+        if (concorso.isInvitazionale() &&
+                (concorso.getInvitedUserIds() == null ||
+                        !concorso.getInvitedUserIds().contains(partecipanteId))) {
+            throw new SecurityException("Utente non invitato.");
         }
-        Users partecipante = userRepository.findById(partecipanteId)
+        Users utente = userRepository.findById(partecipanteId)
                 .orElseThrow(() -> new RuntimeException("Partecipante non trovato."));
-        if (partecipazione == null) {
-            partecipazione = new ContestEntry();
-        }
+        if (partecipazione == null) partecipazione = new ContestEntry();
+        partecipazione.setConcorso(concorso);
+        partecipazione.setPartecipante(utente);
+        //  ───────── NUOVA LOGICA: ogni submit parte IN_ATTESA ─────────
+        partecipazione.setStato(StatoPartecipazione.IN_ATTESA);
+        // contenuto inizialmente vuoto
         if (partecipazione.getContenuto() == null) {
             partecipazione.setContenuto("");
         }
-        partecipazione.setConcorso(concorso);
-        partecipazione.setPartecipante(partecipante);
-        partecipazione.setStato(StatoPartecipazione.IN_ATTESA);
         return contestEntryRepository.save(partecipazione);
     }
 
-    // Recupera tutte le partecipazioni per un concorso
+    // 3) Invio o aggiornamento del contenuto: imposta SEMPRE IN_ATTESA
+    public ContestEntry submitContent(Long partecipazioneId,
+                                      String contenuto,
+                                      Long partecipanteId) {
+        ContestEntry entry = contestEntryRepository.findById(partecipazioneId)
+                .orElseThrow(() -> new RuntimeException("Partecipazione non trovata."));
+        if (!entry.getPartecipante().getId().equals(partecipanteId)) {
+            throw new SecurityException("Solo il partecipante può inviare il contenuto.");
+        }
+        entry.setContenuto(contenuto);
+        entry.setStato(StatoPartecipazione.IN_ATTESA);
+        return contestEntryRepository.save(entry);
+    }
+
+    // 4) Approvazione della partecipazione/contenuto (Animatore o Curatore)
+    public ContestEntry approvaPartecipazione(Long partecipazioneId,
+                                              Long validatoreId) {
+        Users validatore = userRepository.findById(validatoreId)
+                .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
+        if (!(validatore.getRuolo() == UserRole.ANIMATORE ||
+                validatore.getRuolo() == UserRole.CURATORE)) {
+            throw new SecurityException("Solo Animatore o Curatore possono approvare.");
+        }
+        ContestEntry entry = contestEntryRepository.findById(partecipazioneId)
+                .orElseThrow(() -> new RuntimeException("Partecipazione non trovata."));
+        if (entry.getStato() != StatoPartecipazione.IN_ATTESA) {
+            throw new IllegalStateException("Stato non IN_ATTESA.");
+        }
+        entry.setStato(StatoPartecipazione.APPROVATA);
+        return contestEntryRepository.save(entry);
+    }
+
+    // 5) Rifiuto della partecipazione/contenuto (Animatore o Curatore)
+    public ContestEntry rifiutaPartecipazione(Long partecipazioneId,
+                                              Long validatoreId) {
+        Users validatore = userRepository.findById(validatoreId)
+                .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
+        if (!(validatore.getRuolo() == UserRole.ANIMATORE ||
+                validatore.getRuolo() == UserRole.CURATORE)) {
+            throw new SecurityException("Solo Animatore o Curatore possono rifiutare.");
+        }
+        ContestEntry entry = contestEntryRepository.findById(partecipazioneId)
+                .orElseThrow(() -> new RuntimeException("Partecipazione non trovata."));
+        if (entry.getStato() != StatoPartecipazione.IN_ATTESA) {
+            throw new IllegalStateException("Stato non IN_ATTESA.");
+        }
+        entry.setStato(StatoPartecipazione.RIFIUTATA);
+        return contestEntryRepository.save(entry);
+    }
+
+    // 6) Letture di comodo
     public List<ContestEntry> getPartecipazioniPerConcorso(Long concorsoId) {
         return contestEntryRepository.findByConcorsoId(concorsoId);
     }
 
-    // Approvazione di una partecipazione: solo Animatore o Curatore possono approvare
-    public ContestEntry approvaPartecipazione(Long partecipazioneId, Long validatoreId) {
-        Users validatore = userRepository.findById(validatoreId)
-                .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
-        if (!(validatore.getRuolo() == UserRole.ANIMATORE || validatore.getRuolo() == UserRole.CURATORE)) {
-            throw new SecurityException("Solo Animatore o Curatore possono approvare le partecipazioni.");
-        }
-        ContestEntry partecipazione = contestEntryRepository.findById(partecipazioneId)
-                .orElseThrow(() -> new RuntimeException("Partecipazione non trovata."));
-        if (partecipazione.getStato() != StatoPartecipazione.IN_ATTESA) {
-            throw new IllegalStateException("La partecipazione non è in stato IN_ATTESA.");
-        }
-        partecipazione.setStato(StatoPartecipazione.APPROVATA);
-        return contestEntryRepository.save(partecipazione);
-    }
-
-    // Rifiuto di una partecipazione (stesso controllo)
-    public ContestEntry rifiutaPartecipazione(Long partecipazioneId, Long validatoreId) {
-        Users validatore = userRepository.findById(validatoreId)
-                .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
-        if (!(validatore.getRuolo() == UserRole.ANIMATORE || validatore.getRuolo() == UserRole.CURATORE)) {
-            throw new SecurityException("Solo Animatore o Curatore possono rifiutare le partecipazioni.");
-        }
-        ContestEntry partecipazione = contestEntryRepository.findById(partecipazioneId)
-                .orElseThrow(() -> new RuntimeException("Partecipazione non trovata."));
-        if (partecipazione.getStato() != StatoPartecipazione.IN_ATTESA) {
-            throw new IllegalStateException("La partecipazione non è in stato IN_ATTESA.");
-        }
-        partecipazione.setStato(StatoPartecipazione.RIFIUTATA);
-        return contestEntryRepository.save(partecipazione);
-    }
-
-    // Recupera tutti i concorsi
     public List<Contest> getAllConcorsi() {
         return contestRepository.findAll();
     }
 
-    // Recupera concorsi filtrati per stato
     public List<Contest> getConcorsiByStato(StatoConcorso stato) {
         return contestRepository.findByStato(stato);
     }
 
-    // Recupera un concorso per ID
     public Contest getContestById(Long id) {
         return contestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Concorso non trovato con ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Concorso non trovato."));
     }
 
-    // Recupera tutte le partecipazioni dai concorsi creati da un Animatore
     public List<ContestEntry> getPartecipazioniPerAnimatore(Long animatoreId) {
-        // Recupera i concorsi creati dall'animatore
-        List<Contest> concorsiCreati = contestRepository.findAll()
-                .stream()
-                .filter(c -> c.getCreatore() != null && c.getCreatore().getId().equals(animatoreId))
+        List<Contest> concorsi = getAllConcorsi().stream()
+                .filter(c -> c.getCreatore()!=null && c.getCreatore().getId().equals(animatoreId))
                 .collect(Collectors.toList());
-
-        // Aggrega tutte le partecipazioni dai concorsi trovati
-        List<ContestEntry> tuttePartecipazioni = new ArrayList<>();
-        for (Contest concorso : concorsiCreati) {
-            if (concorso.getPartecipazioni() != null) {
-                tuttePartecipazioni.addAll(concorso.getPartecipazioni());
-            }
-        }
-        return tuttePartecipazioni;
+        List<ContestEntry> all = new ArrayList<>();
+        concorsi.forEach(c -> {
+            if (c.getPartecipazioni()!=null) all.addAll(c.getPartecipazioni());
+        });
+        return all;
     }
 }

@@ -1,107 +1,134 @@
 package Geoexplore.Controller;
 
-import Geoexplore.Contest.*;
-import Geoexplore.User.UserRole;
+import Geoexplore.Contest.Contest;
+import Geoexplore.Contest.ContestEntry;
+import Geoexplore.Contest.ContestService;
+import Geoexplore.Contest.StatoConcorso;
 import Geoexplore.User.Users;
 import Geoexplore.User.UserRepository;
+import Geoexplore.User.UserRole;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/contest")
 public class ContestController {
 
-    @Autowired
-    private ContestService contestService;
+    @Autowired private ContestService contestService;
+    @Autowired private UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    // Endpoint per creare un concorso (solo da parte di un Animatore)
     @PostMapping("/create")
-    public ResponseEntity<?> creaConcorso(@RequestBody Contest concorso, @RequestParam Long creatoreId) {
-        Users creatore = userRepository.findById(creatoreId)
-                .orElseThrow(() -> new RuntimeException("Creatore non trovato"));
-        if (creatore.getRuolo() != UserRole.ANIMATORE) {
-            return ResponseEntity.status(403).body("Solo un Animatore può creare un concorso.");
+    public ResponseEntity<?> creaConcorso(@RequestBody Contest concorso,
+                                          @RequestParam Long creatoreId) {
+        try {
+            Contest saved = contestService.creaConcorso(concorso, creatoreId);
+            return ResponseEntity.ok("Concorso creato. ID: " + saved.getId());
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
         }
-        Contest concorsoCreato = contestService.creaConcorso(concorso, creatoreId);
-        return ResponseEntity.ok("Concorso creato con successo. ID: " + concorsoCreato.getId());
     }
 
-    // Endpoint per partecipare ad un concorso (per Contributor o Contributor Autorizzato)
     @PostMapping("/{concorsoId}/join")
-    public ResponseEntity<?> partecipaAlConcorso(@PathVariable Long concorsoId,
-                                                 @RequestParam Long partecipanteId,
-                                                 @RequestBody(required = false) ContestEntry partecipazione) {
-        if (partecipazione == null) {
-            partecipazione = new ContestEntry();
-            partecipazione.setContenuto("");
+    public ResponseEntity<?> partecipa(@PathVariable Long concorsoId,
+                                       @RequestParam Long partecipanteId,
+                                       @RequestBody(required=false) ContestEntry participation) {
+        try {
+            ContestEntry saved = contestService.partecipaAlConcorso(
+                    concorsoId, participation, partecipanteId);
+            return ResponseEntity.ok("Partecipazione inviata. ID: " + saved.getId());
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
         }
-        ContestEntry partecipazioneCreato = contestService.partecipaAlConcorso(concorsoId, partecipazione, partecipanteId);
-        return ResponseEntity.ok("Partecipazione inviata. ID partecipazione: " + partecipazioneCreato.getId());
     }
 
-    // Endpoint per visualizzare tutte le partecipazioni di un concorso
+    @PutMapping("/{concorsoId}/partecipazione/{parteId}/contenuto")
+    public ResponseEntity<?> submitContent(@PathVariable Long parteId,
+                                           @PathVariable Long concorsoId,
+                                           @RequestParam Long partecipanteId,
+                                           @RequestBody Map<String,String> body) {
+        try {
+            String contenuto = body.get("contenuto");
+            ContestEntry updated = contestService.submitContent(
+                    parteId, contenuto, partecipanteId);
+            return ResponseEntity.ok("Contenuto inviato. ID partecipazione: "
+                    + updated.getId());
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+    @PatchMapping("/partecipazione/{parteId}/approva")
+    public ResponseEntity<?> approva(@PathVariable Long parteId,
+                                     @RequestParam Long validatoreId) {
+        try {
+            ContestEntry upd = contestService.approvaPartecipazione(parteId, validatoreId);
+            return ResponseEntity.ok("Partecipazione approvata. ID: " + upd.getId());
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        }
+    }
+
+    @PatchMapping("/partecipazione/{parteId}/rifiuta")
+    public ResponseEntity<?> rifiuta(@PathVariable Long parteId,
+                                     @RequestParam Long validatoreId) {
+        try {
+            ContestEntry upd = contestService.rifiutaPartecipazione(parteId, validatoreId);
+            return ResponseEntity.ok("Partecipazione rifiutata. ID: " + upd.getId());
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        }
+    }
+
     @GetMapping("/{concorsoId}/partecipazioni")
-    public ResponseEntity<?> getPartecipazioni(@PathVariable Long concorsoId) {
-        List<ContestEntry> partecipazioni = contestService.getPartecipazioniPerConcorso(concorsoId);
-        return ResponseEntity.ok(partecipazioni);
+    public ResponseEntity<?> listPartecipazioni(@PathVariable Long concorsoId) {
+        return ResponseEntity.ok(contestService.getPartecipazioniPerConcorso(concorsoId));
     }
 
-    // Endpoint per approvare una partecipazione (solo da parte di un Animatore o Curatore)
-    @PatchMapping("/partecipazione/{partecipazioneId}/approva")
-    public ResponseEntity<?> approvaPartecipazione(@PathVariable Long partecipazioneId, @RequestParam Long validatoreId) {
-        try {
-            ContestEntry partecipazione = contestService.approvaPartecipazione(partecipazioneId, validatoreId);
-            return ResponseEntity.ok("Partecipazione approvata. ID: " + partecipazione.getId());
-        } catch (Exception ex) {
-            return ResponseEntity.status(500).body("Errore nell'approvazione: " + ex.getMessage());
-        }
-    }
-
-    // Endpoint per rifiutare una partecipazione (solo da parte di un Animatore o Curatore)
-    @PatchMapping("/partecipazione/{partecipazioneId}/rifiuta")
-    public ResponseEntity<?> rifiutaPartecipazione(@PathVariable Long partecipazioneId, @RequestParam Long validatoreId) {
-        try {
-            ContestEntry partecipazione = contestService.rifiutaPartecipazione(partecipazioneId, validatoreId);
-            return ResponseEntity.ok("Partecipazione rifiutata. ID: " + partecipazione.getId());
-        } catch (Exception ex) {
-            return ResponseEntity.status(500).body("Errore nel rifiuto: " + ex.getMessage());
-        }
-    }
-
-    // Endpoint per recuperare tutti i concorsi (con le relative partecipazioni, grazie a fetch EAGER)
     @GetMapping("/all")
-    public ResponseEntity<?> getAllConcorsi() {
+    public ResponseEntity<?> getAll() {
         return ResponseEntity.ok(contestService.getAllConcorsi());
     }
 
-    // Endpoint per recuperare concorsi filtrati per stato
     @GetMapping("/status")
-    public ResponseEntity<?> getConcorsiByStato(@RequestParam String stato) {
-        StatoConcorso s;
+    public ResponseEntity<?> byStatus(@RequestParam String stato) {
         try {
-            s = StatoConcorso.valueOf(stato);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Stato non valido. I possibili valori sono: BOZZA, IN_CORSO, CHIUSO.");
+            StatoConcorso s = StatoConcorso.valueOf(stato);
+            return ResponseEntity.ok(contestService.getConcorsiByStato(s));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body("Stato non valido.");
         }
-        return ResponseEntity.ok(contestService.getConcorsiByStato(s));
     }
 
-    // Endpoint per recuperare un concorso per ID
     @GetMapping("/{id}")
-    public ResponseEntity<?> getContestById(@PathVariable Long id) {
-        Contest contest = contestService.getContestById(id);
-        return ResponseEntity.ok(contest);
+    public ResponseEntity<?> getOne(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(contestService.getContestById(id));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        }
     }
 
-    // Nuovo endpoint: Recupera tutte le partecipazioni per i concorsi creati da un Animatore
-    @GetMapping("/animator/{animatoreId}/partecipazioni")
-    public ResponseEntity<?> getPartecipazioniByAnimatore(@PathVariable Long animatoreId) {
-        List<ContestEntry> partecipazioni = contestService.getPartecipazioniPerAnimatore(animatoreId);
-        return ResponseEntity.ok(partecipazioni);
+    @GetMapping("/animator/{animId}/partecipazioni")
+    public ResponseEntity<?> byAnimator(@PathVariable Long animId) {
+        return ResponseEntity.ok(contestService.getPartecipazioniPerAnimatore(animId));
     }
 }

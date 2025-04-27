@@ -1,8 +1,11 @@
 package Geoexplore.Content;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
 import Geoexplore.POI.POI;
+import Geoexplore.Contest.Contest;
 
 @Entity
 @Table(name = "contents")
@@ -29,11 +32,22 @@ public class Content {
 
     @ManyToOne
     @JoinColumn(name = "poi_id")
+    @JsonIgnoreProperties("contents")
     private POI poi;
+
+    @ManyToOne
+    @JoinColumn(name = "contest_id")
+    @JsonIgnoreProperties("contents")
+    private Contest contest;
 
     public Content() {}
 
-    public Content(String titolo, String descrizione, String multimediaUrl, ContentType contentType, POI poi) {
+    // Costruttore per POI/GENERIC
+    public Content(String titolo,
+                   String descrizione,
+                   String multimediaUrl,
+                   ContentType contentType,
+                   POI poi) {
         this.titolo = titolo;
         this.descrizione = descrizione;
         this.multimediaUrl = multimediaUrl;
@@ -43,7 +57,22 @@ public class Content {
         this.status = ContentStatus.IN_ATTESA;
     }
 
-    // Getters e Setters
+    // Costruttore per CONTEST
+    public Content(String titolo,
+                   String descrizione,
+                   String multimediaUrl,
+                   Contest contest) {
+        this.titolo = titolo;
+        this.descrizione = descrizione;
+        this.multimediaUrl = multimediaUrl;
+        this.contentType = ContentType.CONTEST;
+        this.contest = contest;
+        this.dataCreazione = LocalDateTime.now();
+        this.status = ContentStatus.IN_ATTESA;
+    }
+
+    // — Getters & Setters —
+
     public Long getId() { return id; }
     public String getTitolo() { return titolo; }
     public void setTitolo(String titolo) { this.titolo = titolo; }
@@ -59,4 +88,6 @@ public class Content {
     public void setStatus(ContentStatus status) { this.status = status; }
     public POI getPoi() { return poi; }
     public void setPoi(POI poi) { this.poi = poi; }
+    public Contest getContest() { return contest; }
+    public void setContest(Contest contest) { this.contest = contest; }
 }
