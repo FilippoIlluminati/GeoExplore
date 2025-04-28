@@ -3,7 +3,6 @@ package Geoexplore.Content;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-
 import Geoexplore.POI.POI;
 import Geoexplore.Contest.Contest;
 
@@ -42,7 +41,6 @@ public class Content {
 
     public Content() {}
 
-    // Costruttore per POI/GENERIC
     public Content(String titolo,
                    String descrizione,
                    String multimediaUrl,
@@ -57,7 +55,6 @@ public class Content {
         this.status = ContentStatus.IN_ATTESA;
     }
 
-    // Costruttore per CONTEST
     public Content(String titolo,
                    String descrizione,
                    String multimediaUrl,
@@ -70,8 +67,6 @@ public class Content {
         this.dataCreazione = LocalDateTime.now();
         this.status = ContentStatus.IN_ATTESA;
     }
-
-    // — Getters & Setters —
 
     public Long getId() { return id; }
     public String getTitolo() { return titolo; }

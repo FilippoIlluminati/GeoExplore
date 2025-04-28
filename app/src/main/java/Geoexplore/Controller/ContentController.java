@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -15,7 +14,6 @@ public class ContentController {
 
     @Autowired private ContentService contentService;
 
-    // — creazione POI/GENERIC (unchanged) —
     @PostMapping("/create")
     public ResponseEntity<?> createContent(
             @RequestBody Content content,
@@ -32,7 +30,43 @@ public class ContentController {
         }
     }
 
-    // — creazione Contest content —
+    @GetMapping("/poi/{poiId}")
+    public ResponseEntity<List<Content>> getContentsByPOI(@PathVariable Long poiId) {
+        return ResponseEntity.ok(contentService.getContentsByPOI(poiId));
+    }
+
+    @PatchMapping("/{contentId}/approve")
+    public ResponseEntity<?> approveContent(
+            @PathVariable Long contentId,
+            @RequestParam Long validatorId) {
+        try {
+            Content upd = contentService.approveContent(contentId, validatorId);
+            return ResponseEntity.ok("Content approvato. ID: " + upd.getId());
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        }
+    }
+
+    @PatchMapping("/{contentId}/reject")
+    public ResponseEntity<?> rejectContent(
+            @PathVariable Long contentId,
+            @RequestParam Long validatorId) {
+        try {
+            Content upd = contentService.rejectContent(contentId, validatorId);
+            return ResponseEntity.ok("Content rifiutato. ID: " + upd.getId());
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        }
+    }
+
     @PostMapping("/contest/create")
     public ResponseEntity<?> createContestContent(
             @RequestBody Content content,
@@ -54,19 +88,11 @@ public class ContentController {
         }
     }
 
-    // — GET contenuti POI —
-    @GetMapping("/poi/{poiId}")
-    public ResponseEntity<?> getContentsByPOI(@PathVariable Long poiId) {
-        return ResponseEntity.ok(contentService.getContentsByPOI(poiId));
-    }
-
-    // — GET contenuti Contest —
     @GetMapping("/contest/{contestId}")
-    public ResponseEntity<?> getContestContents(@PathVariable Long contestId) {
+    public ResponseEntity<List<Content>> getContestContents(@PathVariable Long contestId) {
         return ResponseEntity.ok(contentService.getContentsByContest(contestId));
     }
 
-    // — approva Contest content —
     @PatchMapping("/contest/{contentId}/approve")
     public ResponseEntity<?> approveContestContent(
             @PathVariable Long contentId,
@@ -83,7 +109,6 @@ public class ContentController {
         }
     }
 
-    // — rifiuta Contest content —
     @PatchMapping("/contest/{contentId}/reject")
     public ResponseEntity<?> rejectContestContent(
             @PathVariable Long contentId,

@@ -1,4 +1,3 @@
-// src/main/java/Geoexplore/Content/ContentService.java
 package Geoexplore.Content;
 
 import Geoexplore.POI.POIRepository;
@@ -11,7 +10,6 @@ import Geoexplore.Contest.StatoPartecipazione;
 import Geoexplore.User.UserRepository;
 import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,8 +24,6 @@ public class ContentService {
     @Autowired private ContestRepository contestRepository;
     @Autowired private ContestEntryRepository entryRepository;
     @Autowired private UserRepository userRepository;
-
-    // — Logica invariata per POI/GENERIC —
 
     public Content createContent(Content content, Long poiId, Long creatorId) {
         POI poi = poiRepository.findById(poiId)
@@ -54,8 +50,6 @@ public class ContentService {
         return contentRepository.save(content);
     }
 
-    // — Nuova logica per CONTEST —
-
     public Content createContestContent(Content content,
                                         Long contestId,
                                         Long entryId,
@@ -73,7 +67,6 @@ public class ContentService {
         if (!entry.getPartecipante().getId().equals(creatorId)) {
             throw new SecurityException("Solo il partecipante può inviare il contenuto.");
         }
-
         content.setContest(contest);
         content.setContentType(ContentType.CONTEST);
         content.setDataCreazione(LocalDateTime.now());
@@ -89,6 +82,42 @@ public class ContentService {
         return contentRepository.findByContestId(contestId);
     }
 
+    public Content approveContent(Long contentId, Long validatorId) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new RuntimeException("Content non trovato."));
+        if (content.getContentType() == ContentType.CONTEST) {
+            throw new IllegalStateException("Usare /content/contest/{id}/approve per i contest content.");
+        }
+        Users validator = userRepository.findById(validatorId)
+                .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
+        if (validator.getRuolo() != UserRole.CURATORE) {
+            throw new SecurityException("Solo il Curatore può approvare contenuti generici.");
+        }
+        if (content.getStatus() != ContentStatus.IN_ATTESA) {
+            throw new IllegalStateException("Content non in stato IN_ATTESA.");
+        }
+        content.setStatus(ContentStatus.APPROVATO);
+        return contentRepository.save(content);
+    }
+
+    public Content rejectContent(Long contentId, Long validatorId) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new RuntimeException("Content non trovato."));
+        if (content.getContentType() == ContentType.CONTEST) {
+            throw new IllegalStateException("Usare /content/contest/{id}/reject per i contest content.");
+        }
+        Users validator = userRepository.findById(validatorId)
+                .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
+        if (validator.getRuolo() != UserRole.CURATORE) {
+            throw new SecurityException("Solo il Curatore può rifiutare contenuti generici.");
+        }
+        if (content.getStatus() != ContentStatus.IN_ATTESA) {
+            throw new IllegalStateException("Content non in stato IN_ATTESA.");
+        }
+        content.setStatus(ContentStatus.RIFIUTATO);
+        return contentRepository.save(content);
+    }
+
     public Content approveContestContent(Long contentId, Long validatorId) {
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new RuntimeException("Content non trovato."));
@@ -97,9 +126,8 @@ public class ContentService {
         }
         Users validator = userRepository.findById(validatorId)
                 .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
-        if (!(validator.getRuolo() == UserRole.ANIMATORE ||
-                validator.getRuolo() == UserRole.CURATORE)) {
-            throw new SecurityException("Solo Animatore o Curatore possono approvare.");
+        if (validator.getRuolo() != UserRole.ANIMATORE) {
+            throw new SecurityException("Solo l'Animatore può approvare contenuti di contest.");
         }
         if (content.getStatus() != ContentStatus.IN_ATTESA) {
             throw new IllegalStateException("Content non in stato IN_ATTESA.");
@@ -116,9 +144,8 @@ public class ContentService {
         }
         Users validator = userRepository.findById(validatorId)
                 .orElseThrow(() -> new RuntimeException("Validatore non trovato."));
-        if (!(validator.getRuolo() == UserRole.ANIMATORE ||
-                validator.getRuolo() == UserRole.CURATORE)) {
-            throw new SecurityException("Solo Animatore o Curatore possono rifiutare.");
+        if (validator.getRuolo() != UserRole.ANIMATORE) {
+            throw new SecurityException("Solo l'Animatore può rifiutare contenuti di contest.");
         }
         if (content.getStatus() != ContentStatus.IN_ATTESA) {
             throw new IllegalStateException("Content non in stato IN_ATTESA.");

@@ -8,5 +8,4 @@ import java.util.List;
 public interface ContentRepository extends JpaRepository<Content, Long> {
     List<Content> findByPoiId(Long poiId);
     List<Content> findByContestId(Long contestId);
-    Content findByTitolo(String titolo);
 }
