@@ -2,12 +2,17 @@ package Geoexplore.Controller;
 
 import Geoexplore.POI.POI;
 import Geoexplore.POI.POIRepository;
+import Geoexplore.Content.Content;
+import Geoexplore.Content.ContentRepository;
+import Geoexplore.Content.ContentStatus;
 import Geoexplore.Report.Report;
 import Geoexplore.Report.ReportManager;
+import Geoexplore.Report.ReportStatus;
+import Geoexplore.User.UserRepository;
+import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,85 +28,125 @@ public class ReportController {
     @Autowired
     private POIRepository poiRepository;
 
-    /**
-     * Segnala un POI tramite URL rapido:
-     * POST /reports/{poiId}
-     * - se l'utente è autenticato, ne incamera le credenziali come reporter
-     */
+    @Autowired
+    private ContentRepository contentRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    /** 1) Segnalazione rapida di un POI */
     @PostMapping("/{poiId}")
-    public ResponseEntity<Report> quickReportByPath(
-            @PathVariable Long poiId,
-            Authentication authentication
-    ) {
+    public ResponseEntity<Report> quickReport(@PathVariable Long poiId) {
         POI poi = poiRepository.findById(poiId)
                 .orElseThrow(() -> new RuntimeException("POI non trovato"));
 
-        // Costruisco il Report
-        Report report = new Report();
-        report.setTipo("SEGNALAZIONE");
-        report.setDescrizione("Segnalazione rapida POI #" + poiId);
-        report.setPoi(poi);
+        Report rpt = new Report();
+        rpt.setTipo("POI");
+        rpt.setDescrizione("Segnalazione rapida POI #" + poiId);
+        rpt.setPoi(poi);
+        rpt.setStato(ReportStatus.IN_ATTESA);
 
-        // Se arriva Authentication valida e principal è un Users, lo registro come reporter
-        if (authentication != null && authentication.isAuthenticated()) {
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof Users) {
-                report.setReporter((Users) principal);
-            }
-        }
-
-        Report saved = reportManager.saveReport(report);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(reportManager.saveReport(rpt));
     }
 
-    /**
-     * Creazione “classica” via JSON body:
-     * POST /reports
-     */
+    /** 2) Creazione “classica” via JSON body */
     @PostMapping
-    public ResponseEntity<Report> createReport(
-            @RequestBody Report report,
-            Authentication authentication
-    ) {
-        // Se l’utente è autenticato, lo registro come reporter
-        if (authentication != null && authentication.isAuthenticated()) {
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof Users) {
-                report.setReporter((Users) principal);
-            }
-        }
-        Report saved = reportManager.saveReport(report);
-        return ResponseEntity.ok(saved);
+    public ResponseEntity<Report> createReport(@RequestBody Report report) {
+        report.setStato(ReportStatus.IN_ATTESA);
+        return ResponseEntity.ok(reportManager.saveReport(report));
     }
 
-    /**
-     * Recupera tutti i report
-     */
+    /** 3) Recupera tutti i report */
     @GetMapping
     public ResponseEntity<List<Report>> getAllReports() {
         return ResponseEntity.ok(reportManager.getAllReports());
     }
 
-    /**
-     * Recupera un report per ID
-     */
+    /** 4) Recupera un report per ID */
     @GetMapping("/{id}/view")
     public ResponseEntity<Report> getReportById(@PathVariable Long id) {
-        Optional<Report> rep = reportManager.getReportById(id);
-        return rep.map(ResponseEntity::ok)
+        Optional<Report> maybe = reportManager.getReportById(id);
+        return maybe.map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /**
-     * Elimina un report per ID
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteReport(@PathVariable Long id) {
-        if (reportManager.getReportById(id).isPresent()) {
-            reportManager.deleteReport(id);
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    /** 5) Ignora la segnalazione (solo Gestore) */
+    @DeleteMapping("/{id}/ignore")
+    public ResponseEntity<Void> ignoreReport(
+            @PathVariable Long id,
+            @RequestParam Long managerId
+    ) {
+        Users mgr = userRepository.findById(managerId)
+                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
+        if (mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA)
+            return ResponseEntity.status(403).build();
+
+        Report rpt = reportManager.getReportById(id)
+                .orElseThrow(() -> new RuntimeException("Report non trovato"));
+        rpt.setStato(ReportStatus.IGNORATO);
+        reportManager.saveReport(rpt);
+        return ResponseEntity.noContent().build();
     }
+
+    /** 6) Elimina l’oggetto segnalato (POI o Content) + la segnalazione (solo Gestore) */
+    @DeleteMapping("/{id}/resolve-delete")
+    public ResponseEntity<Void> resolveAndDelete(
+            @PathVariable Long id,
+            @RequestParam Long managerId
+    ) {
+        Users mgr = userRepository.findById(managerId)
+                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
+        if (mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA)
+            return ResponseEntity.status(403).build();
+
+        Report rpt = reportManager.getReportById(id)
+                .orElseThrow(() -> new RuntimeException("Report non trovato"));
+
+        // elimina fisicamente l’oggetto
+        if ("POI".equals(rpt.getTipo())) {
+            poiRepository.deleteById(rpt.getPoi().getId());
+        } else if ("CONTENT".equals(rpt.getTipo())) {
+            contentRepository.deleteById(rpt.getContent().getId());
+        } else {
+            throw new RuntimeException("Tipo di segnalazione non supportato: " + rpt.getTipo());
+        }
+
+        // poi elimina la segnalazione
+        reportManager.deleteReport(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 7) “Respinge” l’oggetto segnalato ma lo tiene, marca report come RISOLTO */
+    @PatchMapping("/{id}/resolve-reject")
+    public ResponseEntity<Void> resolveAndReject(
+            @PathVariable Long id,
+            @RequestParam Long managerId
+    ) {
+        Users mgr = userRepository.findById(managerId)
+                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
+        if (mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA)
+            return ResponseEntity.status(403).build();
+
+        Report rpt = reportManager.getReportById(id)
+                .orElseThrow(() -> new RuntimeException("Report non trovato"));
+
+        // modifica lo stato dell’oggetto senza cancellarlo
+        if ("POI".equals(rpt.getTipo())) {
+            POI poi = rpt.getPoi();
+            poi.setApprovato(false);
+            poiRepository.save(poi);
+        } else if ("CONTENT".equals(rpt.getTipo())) {
+            Content content = rpt.getContent();
+            content.setStatus(ContentStatus.RIFIUTATO);
+            contentRepository.save(content);
+        } else {
+            throw new RuntimeException("Tipo di segnalazione non supportato: " + rpt.getTipo());
+        }
+
+        // marca report come risolto
+        rpt.setStato(ReportStatus.RISOLTO);
+        reportManager.saveReport(rpt);
+        return ResponseEntity.noContent().build();
+    }
+
 }

@@ -2,10 +2,15 @@ package Geoexplore.Controller;
 
 import Geoexplore.Content.Content;
 import Geoexplore.Content.ContentService;
+import Geoexplore.Report.Report;
+import Geoexplore.Report.ReportManager;
+import Geoexplore.User.UserRepository;
+import Geoexplore.User.Users;
+import Geoexplore.User.UserRole;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -13,115 +18,93 @@ import java.util.List;
 public class ContentController {
 
     @Autowired private ContentService contentService;
+    @Autowired private ReportManager reportManager;
+    @Autowired private UserRepository userRepository;
 
-    @PostMapping("/create")
-    public ResponseEntity<?> createContent(
-            @RequestBody Content content,
-            @RequestParam Long poiId,
-            @RequestParam Long creatorId) {
-        try {
-            Content saved = contentService.createContent(content, poiId, creatorId);
-            return ResponseEntity.ok("Content creato. ID: " + saved.getId() +
-                    " Stato: " + saved.getStatus());
-        } catch (SecurityException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-        } catch (RuntimeException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        }
+    /** 1) Rendo visibile a tutti i contenuti approvati */
+    @GetMapping
+    public ResponseEntity<List<Content>> getAllContents() {
+        return ResponseEntity.ok(contentService.getAllContents());
     }
 
-    @GetMapping("/poi/{poiId}")
-    public ResponseEntity<List<Content>> getContentsByPOI(@PathVariable Long poiId) {
-        return ResponseEntity.ok(contentService.getContentsByPOI(poiId));
+    @GetMapping("/{id}")
+    public ResponseEntity<Content> getContentById(@PathVariable Long id) {
+        return contentService.getContentById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/{contentId}/approve")
-    public ResponseEntity<?> approveContent(
+    /** 2) Segnalazione di un content (solo autenticati) */
+    @PostMapping("/{contentId}/report")
+    public ResponseEntity<Report> reportContent(
             @PathVariable Long contentId,
-            @RequestParam Long validatorId) {
-        try {
-            Content upd = contentService.approveContent(contentId, validatorId);
-            return ResponseEntity.ok("Content approvato. ID: " + upd.getId());
-        } catch (SecurityException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+            @RequestParam(required = false) Long reporterId,
+            @RequestBody(required = false) String descrizione) {
+
+        Content c = contentService.getContentById(contentId)
+                .orElseThrow(() -> new RuntimeException("Content non trovato"));
+
+        Report rpt = new Report();
+        rpt.setTipo("CONTENT");
+        rpt.setDescrizione(
+                descrizione != null
+                        ? descrizione
+                        : "Segnalazione rapida Content #" + contentId
+        );
+        rpt.setContent(c);
+
+        if (reporterId != null) {
+            Users u = userRepository.findById(reporterId)
+                    .orElseThrow(() -> new RuntimeException("Reporter non trovato"));
+            rpt.setReporter(u);
         }
+
+        rpt.setStato(Geoexplore.Report.ReportStatus.IN_ATTESA);
+        return ResponseEntity.ok(reportManager.saveReport(rpt));
     }
 
-    @PatchMapping("/{contentId}/reject")
-    public ResponseEntity<?> rejectContent(
-            @PathVariable Long contentId,
-            @RequestParam Long validatorId) {
-        try {
-            Content upd = contentService.rejectContent(contentId, validatorId);
-            return ResponseEntity.ok("Content rifiutato. ID: " + upd.getId());
-        } catch (SecurityException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    /** 3) Il gestore può IGNORARE il report */
+    @DeleteMapping("/reports/{id}/ignore")
+    public ResponseEntity<Void> ignoreReport(
+            @PathVariable Long id,
+            @RequestParam Long managerId) {
+
+        Users mgr = userRepository.findById(managerId)
+                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
+        if (mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            return ResponseEntity.status(403).build();
         }
+        if (!reportManager.getReportById(id).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // solo ignoro il report (lo lascio nel db con stato IGNORATO)
+        reportManager.getReportById(id).ifPresent(r -> {
+            r.setStato(Geoexplore.Report.ReportStatus.IGNORATO);
+            reportManager.saveReport(r);
+        });
+        return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/contest/create")
-    public ResponseEntity<?> createContestContent(
-            @RequestBody Content content,
-            @RequestParam Long contestId,
-            @RequestParam Long entryId,
-            @RequestParam Long creatorId) {
-        try {
-            Content saved = contentService.createContestContent(
-                    content, contestId, entryId, creatorId);
-            return ResponseEntity.ok("Contest Content creato. ID: "
-                    + saved.getId() +
-                    " Stato: " + saved.getStatus());
-        } catch (SecurityException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-        }
-    }
+    /** 4) Il gestore può ELIMINARE il content segnalato + cancellare il report */
+    @DeleteMapping("/reports/{id}/resolve-delete")
+    public ResponseEntity<Void> resolveAndDeleteReport(
+            @PathVariable Long id,
+            @RequestParam Long managerId) {
 
-    @GetMapping("/contest/{contestId}")
-    public ResponseEntity<List<Content>> getContestContents(@PathVariable Long contestId) {
-        return ResponseEntity.ok(contentService.getContentsByContest(contestId));
-    }
-
-    @PatchMapping("/contest/{contentId}/approve")
-    public ResponseEntity<?> approveContestContent(
-            @PathVariable Long contentId,
-            @RequestParam Long validatorId) {
-        try {
-            Content upd = contentService.approveContestContent(contentId, validatorId);
-            return ResponseEntity.ok("Contest Content approvato. ID: " + upd.getId());
-        } catch (SecurityException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        Users mgr = userRepository.findById(managerId)
+                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
+        if (mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            return ResponseEntity.status(403).build();
         }
-    }
 
-    @PatchMapping("/contest/{contentId}/reject")
-    public ResponseEntity<?> rejectContestContent(
-            @PathVariable Long contentId,
-            @RequestParam Long validatorId) {
-        try {
-            Content upd = contentService.rejectContestContent(contentId, validatorId);
-            return ResponseEntity.ok("Contest Content rifiutato. ID: " + upd.getId());
-        } catch (SecurityException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-        }
+        Report rpt = reportManager.getReportById(id)
+                .orElseThrow(() -> new RuntimeException("Report non trovato"));
+        // elimino il content
+        Long contentId = rpt.getContent().getId();
+        contentService.deleteContent(contentId);
+        // poi elimino il report stesso
+        reportManager.deleteReport(id);
+        return ResponseEntity.noContent().build();
     }
 }
