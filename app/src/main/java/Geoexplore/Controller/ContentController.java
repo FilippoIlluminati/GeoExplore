@@ -2,6 +2,7 @@ package Geoexplore.Controller;
 
 import Geoexplore.Content.Content;
 import Geoexplore.Content.ContentService;
+import Geoexplore.Content.ContentStatus;
 import Geoexplore.Report.Report;
 import Geoexplore.Report.ReportManager;
 import Geoexplore.User.UserRepository;
@@ -18,15 +19,22 @@ import java.util.List;
 public class ContentController {
 
     @Autowired private ContentService contentService;
-    @Autowired private ReportManager reportManager;
     @Autowired private UserRepository userRepository;
+    @Autowired private ReportManager reportManager;
 
-    /** 1) Rendo visibile a tutti i contenuti approvati */
+    // 1) GET di tutti i contenuti APPROVATI (accessibile a chiunque)
     @GetMapping
     public ResponseEntity<List<Content>> getAllContents() {
-        return ResponseEntity.ok(contentService.getAllContents());
+        return ResponseEntity.ok(contentService.getApprovedContents());
     }
 
+    // 2) GET di tutti i contenuti APPROVATI per uno specifico POI
+    @GetMapping("/poi/{poiId}")
+    public ResponseEntity<List<Content>> getContentsByPoi(@PathVariable Long poiId) {
+        return ResponseEntity.ok(contentService.getApprovedContentsByPoi(poiId));
+    }
+
+    // 3) GET di un singolo contenuto APPROVATO
     @GetMapping("/{id}")
     public ResponseEntity<Content> getContentById(@PathVariable Long id) {
         return contentService.getContentById(id)
@@ -34,13 +42,48 @@ public class ContentController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /** 2) Segnalazione di un content (solo autenticati) */
+    // 4) Creazione contenuto (Turista Autenticato o Contributor Autorizzato)
+    @PostMapping("/create")
+    public ResponseEntity<Content> createContent(
+            @RequestParam Long creatorId,
+            @RequestParam(required = false) Long poiId,
+            @RequestBody Content content) {
+        Content created = contentService.createContent(content, poiId, creatorId);
+        return ResponseEntity.ok(created);
+    }
+
+    // 5) Approva un contenuto (solo Animatore)
+    @PatchMapping("/{id}/approve")
+    public ResponseEntity<Content> approveContent(
+            @PathVariable Long id,
+            @RequestParam Long animatorId) {
+        Users animator = userRepository.findById(animatorId)
+                .orElseThrow(() -> new RuntimeException("Animatore non trovato"));
+        if (animator.getRuolo() != UserRole.ANIMATORE) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(contentService.updateStatus(id, ContentStatus.APPROVATO));
+    }
+
+    // 6) Rifiuta un contenuto (solo Animatore)
+    @PatchMapping("/{id}/reject")
+    public ResponseEntity<Content> rejectContent(
+            @PathVariable Long id,
+            @RequestParam Long animatorId) {
+        Users animator = userRepository.findById(animatorId)
+                .orElseThrow(() -> new RuntimeException("Animatore non trovato"));
+        if (animator.getRuolo() != UserRole.ANIMATORE) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(contentService.updateStatus(id, ContentStatus.RIFIUTATO));
+    }
+
+    // 7) Segnala un contenuto (invariato)
     @PostMapping("/{contentId}/report")
     public ResponseEntity<Report> reportContent(
             @PathVariable Long contentId,
             @RequestParam(required = false) Long reporterId,
             @RequestBody(required = false) String descrizione) {
-
         Content c = contentService.getContentById(contentId)
                 .orElseThrow(() -> new RuntimeException("Content non trovato"));
 
@@ -52,59 +95,12 @@ public class ContentController {
                         : "Segnalazione rapida Content #" + contentId
         );
         rpt.setContent(c);
-
         if (reporterId != null) {
             Users u = userRepository.findById(reporterId)
                     .orElseThrow(() -> new RuntimeException("Reporter non trovato"));
             rpt.setReporter(u);
         }
-
         rpt.setStato(Geoexplore.Report.ReportStatus.IN_ATTESA);
         return ResponseEntity.ok(reportManager.saveReport(rpt));
-    }
-
-    /** 3) Il gestore può IGNORARE il report */
-    @DeleteMapping("/reports/{id}/ignore")
-    public ResponseEntity<Void> ignoreReport(
-            @PathVariable Long id,
-            @RequestParam Long managerId) {
-
-        Users mgr = userRepository.findById(managerId)
-                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
-        if (mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
-            return ResponseEntity.status(403).build();
-        }
-        if (!reportManager.getReportById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        // solo ignoro il report (lo lascio nel db con stato IGNORATO)
-        reportManager.getReportById(id).ifPresent(r -> {
-            r.setStato(Geoexplore.Report.ReportStatus.IGNORATO);
-            reportManager.saveReport(r);
-        });
-        return ResponseEntity.noContent().build();
-    }
-
-    /** 4) Il gestore può ELIMINARE il content segnalato + cancellare il report */
-    @DeleteMapping("/reports/{id}/resolve-delete")
-    public ResponseEntity<Void> resolveAndDeleteReport(
-            @PathVariable Long id,
-            @RequestParam Long managerId) {
-
-        Users mgr = userRepository.findById(managerId)
-                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
-        if (mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
-            return ResponseEntity.status(403).build();
-        }
-
-        Report rpt = reportManager.getReportById(id)
-                .orElseThrow(() -> new RuntimeException("Report non trovato"));
-        // elimino il content
-        Long contentId = rpt.getContent().getId();
-        contentService.deleteContent(contentId);
-        // poi elimino il report stesso
-        reportManager.deleteReport(id);
-        return ResponseEntity.noContent().build();
     }
 }

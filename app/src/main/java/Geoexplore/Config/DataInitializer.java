@@ -70,19 +70,6 @@ public class DataInitializer {
                 journeyRepository.save(journey);
             }
 
-            // Content generico di base
-            Content content = contentRepository.findByTitolo("Contenuto di esempio");
-            if (content == null) {
-                content = new Content(
-                        "Contenuto di esempio",
-                        "Descrizione del contenuto di esempio.",
-                        "http://example.com/immagine.jpg",
-                        ContentType.GENERIC,
-                        poi
-                );
-                content.setStatus(ContentStatus.APPROVATO);
-                contentRepository.save(content);
-            }
         };
     }
 }

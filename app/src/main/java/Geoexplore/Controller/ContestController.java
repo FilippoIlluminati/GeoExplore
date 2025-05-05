@@ -50,17 +50,21 @@ public class ContestController {
         }
     }
 
-    @PutMapping("/{concorsoId}/partecipazione/{parteId}/contenuto")
+    /**
+     * Submit or update the contest entry content.
+     * Now mapped to /contest/partecipazione/{parteId}/contenuto
+     * so you can call:
+     *   PUT http://localhost:8080/contest/partecipazione/{entryId}/contenuto?partecipanteId=...
+     */
+    @PutMapping("/partecipazione/{parteId}/contenuto")
     public ResponseEntity<?> submitContent(@PathVariable Long parteId,
-                                           @PathVariable Long concorsoId,
                                            @RequestParam Long partecipanteId,
                                            @RequestBody Map<String,String> body) {
         try {
             String contenuto = body.get("contenuto");
             ContestEntry updated = contestService.submitContent(
                     parteId, contenuto, partecipanteId);
-            return ResponseEntity.ok("Contenuto inviato. ID partecipazione: "
-                    + updated.getId());
+            return ResponseEntity.ok("Contenuto inviato. ID partecipazione: " + updated.getId());
         } catch (SecurityException ex) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
         } catch (RuntimeException ex) {

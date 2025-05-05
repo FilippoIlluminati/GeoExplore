@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import Geoexplore.POI.POI;
 import Geoexplore.Contest.Contest;
+import Geoexplore.User.Users;
 
 @Entity
 @Table(name = "contents")
@@ -39,6 +40,11 @@ public class Content {
     @JsonIgnoreProperties("contents")
     private Contest contest;
 
+    @ManyToOne
+    @JoinColumn(name = "creator_id", nullable = false)
+    @JsonIgnoreProperties("contents")
+    private Users creator;
+
     public Content() {}
 
     public Content(String titolo,
@@ -51,19 +57,6 @@ public class Content {
         this.multimediaUrl = multimediaUrl;
         this.contentType = contentType;
         this.poi = poi;
-        this.dataCreazione = LocalDateTime.now();
-        this.status = ContentStatus.IN_ATTESA;
-    }
-
-    public Content(String titolo,
-                   String descrizione,
-                   String multimediaUrl,
-                   Contest contest) {
-        this.titolo = titolo;
-        this.descrizione = descrizione;
-        this.multimediaUrl = multimediaUrl;
-        this.contentType = ContentType.CONTEST;
-        this.contest = contest;
         this.dataCreazione = LocalDateTime.now();
         this.status = ContentStatus.IN_ATTESA;
     }
@@ -85,4 +78,6 @@ public class Content {
     public void setPoi(POI poi) { this.poi = poi; }
     public Contest getContest() { return contest; }
     public void setContest(Contest contest) { this.contest = contest; }
+    public Users getCreator() { return creator; }
+    public void setCreator(Users creator) { this.creator = creator; }
 }

@@ -7,6 +7,6 @@ import java.util.List;
 
 @Repository
 public interface ContentRepository extends JpaRepository<Content, Long> {
-    List<Content> findByPoiId(Long poiId);
-    Content findByTitolo(String titolo);
+    List<Content> findByPoiIdAndStatus(Long poiId, ContentStatus status);
+    List<Content> findByStatus(ContentStatus status);
 }
