@@ -14,7 +14,7 @@ public class Report {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // tipo di segnalazione: "POI" oppure "CONTENT"
+    // Tipo della segnalazione: "POI" o "CONTENT"
     private String tipo;
 
     @Column(length = 2048)
@@ -32,15 +32,16 @@ public class Report {
     @JoinColumn(name = "reporter_id")
     private Users reporter;
 
+    // Data invio della segnalazione (impostata automaticamente)
     private LocalDateTime dataInvio = LocalDateTime.now();
 
     @Enumerated(EnumType.STRING)
     private ReportStatus stato = ReportStatus.IN_ATTESA;
 
+    // Costruttore vuoto richiesto da JPA
     public Report() {}
 
-    // --- getters & setters ---
-
+    // Getters e Setters
     public Long getId() {
         return id;
     }

@@ -1,7 +1,7 @@
 package Geoexplore.Journey;
 
 import Geoexplore.POI.POI;
-import Geoexplore.POI.POIRepository; // Assicurati che esista un repository per i POI
+import Geoexplore.POI.POIRepository;
 import Geoexplore.User.UserRepository;
 import Geoexplore.User.UserRole;
 import Geoexplore.User.Users;
@@ -23,9 +23,9 @@ public class JourneyService {
     private UserRepository userRepository;
 
     @Autowired
-    private POIRepository poiRepository; // Per caricare i POI reali dal DB
+    private POIRepository poiRepository;
 
-    // Helper per ottenere l'utente autenticato
+    // Restituisce l'utente attualmente autenticato
     private Users getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
@@ -36,24 +36,20 @@ public class JourneyService {
         return user;
     }
 
-    // Crea un nuovo journey
+    // Crea un nuovo journey (solo contributor)
     public Journey createJourney(Journey journey) {
-        // Il journey deve contenere almeno 2 POI
         if (journey.getPoiList() == null || journey.getPoiList().size() < 2) {
             throw new RuntimeException("Un journey deve contenere almeno 2 POI");
         }
 
-        // Carichiamo dal DB i POI effettivi, così da avere i campi reali (nome, descrizione, ecc.)
         List<POI> realPoiList = new ArrayList<>();
         for (POI partialPoi : journey.getPoiList()) {
             POI dbPoi = poiRepository.findById(partialPoi.getId())
-                    .orElseThrow(() -> new RuntimeException(
-                            "POI non trovato con id " + partialPoi.getId()));
+                    .orElseThrow(() -> new RuntimeException("POI non trovato con id " + partialPoi.getId()));
             realPoiList.add(dbPoi);
         }
         journey.setPoiList(realPoiList);
 
-        // Verifica che il creator sia specificato e recuperabile dal DB
         if (journey.getCreator() == null || journey.getCreator().getId() == null) {
             throw new RuntimeException("Creator non specificato");
         }
@@ -64,59 +60,46 @@ public class JourneyService {
         Users creator = optionalCreator.get();
         journey.setCreator(creator);
 
-        // Solo CONTRIBUTOR e CONTRIBUTOR_AUTORIZZATO possono creare un journey
         if (creator.getRuolo() != UserRole.CONTRIBUTOR && creator.getRuolo() != UserRole.CONTRIBUTOR_AUTORIZZATO) {
             throw new RuntimeException("Solo i contributor possono creare un journey");
         }
 
-        // Imposta lo stato di conferma in base al ruolo:
-        if (creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO) {
-            journey.setConfermato(true);
-        } else {
-            journey.setConfermato(false);
-        }
+        journey.setConfermato(creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO);
 
         return journeyRepository.save(journey);
     }
 
-    // Recupera tutti i journey
+    // Restituisce tutti i journey
     public List<Journey> getAllJourneys() {
         return journeyRepository.findAll();
     }
 
-    // Trova un journey per ID
+    // Restituisce un journey specifico per ID
     public Optional<Journey> getJourneyById(Long id) {
         return journeyRepository.findById(id);
     }
 
-    // Aggiorna un journey esistente:
-    // Solo il creatore può modificarlo.
+    // Aggiorna un journey (solo il creatore e solo se non confermato)
     public Journey updateJourney(Long id, Journey journeyDetails) {
         Users currentUser = getAuthenticatedUser();
         return journeyRepository.findById(id).map(journey -> {
-            // Controllo creatore
             if (!journey.getCreator().getId().equals(currentUser.getId())) {
                 throw new RuntimeException("Solo il creatore del journey può modificarlo");
             }
-            // Controllo approvazione
             if (journey.isConfermato()) {
                 throw new RuntimeException("Il journey già approvato non può essere modificato");
             }
-            // Controllo POI
             if (journeyDetails.getPoiList() == null || journeyDetails.getPoiList().size() < 2) {
                 throw new RuntimeException("Un journey deve contenere almeno 2 POI");
             }
 
-            // Carichiamo i POI reali dal DB, così i campi del POI risultano valorizzati
             List<POI> realPoiList = new ArrayList<>();
             for (POI partialPoi : journeyDetails.getPoiList()) {
                 POI dbPoi = poiRepository.findById(partialPoi.getId())
-                        .orElseThrow(() -> new RuntimeException(
-                                "POI non trovato con id " + partialPoi.getId()));
+                        .orElseThrow(() -> new RuntimeException("POI non trovato con id " + partialPoi.getId()));
                 realPoiList.add(dbPoi);
             }
 
-            // Applichiamo le modifiche
             journey.setNome(journeyDetails.getNome());
             journey.setDescrizione(journeyDetails.getDescrizione());
             journey.setOrdinato(journeyDetails.isOrdinato());
@@ -126,8 +109,7 @@ public class JourneyService {
         }).orElseThrow(() -> new RuntimeException("Journey non trovato con id: " + id));
     }
 
-    // Elimina un journey:
-    // Solo il creatore può eliminarlo.
+    // Elimina un journey (solo il creatore)
     public void deleteJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
@@ -141,12 +123,11 @@ public class JourneyService {
         journeyRepository.deleteById(id);
     }
 
-    // Approvazione del journey:
-    // Solo il curatore (CURATORE) può approvare un journey.
+    // Approvazione del journey (solo GESTORE_PIATTAFORMA)
     public Journey approveJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
         if (currentUser.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
-            throw new RuntimeException("Solo il gestore della piattaforma può approvare i POI");
+            throw new RuntimeException("Solo il gestore della piattaforma può approvare i journey");
         }
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
         if (optionalJourney.isEmpty()) {
@@ -157,12 +138,11 @@ public class JourneyService {
         return journeyRepository.save(journey);
     }
 
-    // Rifiuto del journey:
-    // Solo il curatore (CURATORE) può rifiutare un journey; in tal caso il journey viene eliminato.
+    // Rifiuto del journey (solo GESTORE_PIATTAFORMA)
     public void rejectJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
         if (currentUser.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
-            throw new RuntimeException("Solo il gestore della piattaforma può rifiutare i POI");
+            throw new RuntimeException("Solo il gestore della piattaforma può rifiutare i journey");
         }
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
         if (optionalJourney.isEmpty()) {

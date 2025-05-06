@@ -15,25 +15,25 @@ public class JourneyController {
     @Autowired
     private JourneyService journeyService;
 
-    // Crea un nuovo Journey
+    // Crea un nuovo itinerario
     @PostMapping
     public ResponseEntity<?> createJourney(@RequestBody Journey journey) {
         try {
             Journey savedJourney = journeyService.createJourney(journey);
             return ResponseEntity.ok(savedJourney);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante la creazione: " + e.getMessage());
         }
     }
 
-    // Recupera tutti i Journey
+    // Restituisce tutti gli itinerari
     @GetMapping
     public ResponseEntity<List<Journey>> getAllJourneys() {
         List<Journey> journeys = journeyService.getAllJourneys();
         return ResponseEntity.ok(journeys);
     }
 
-    // Recupera un Journey per ID
+    // Restituisce un itinerario specifico per ID
     @GetMapping("/{id}")
     public ResponseEntity<Journey> getJourneyById(@PathVariable Long id) {
         Optional<Journey> journey = journeyService.getJourneyById(id);
@@ -41,47 +41,47 @@ public class JourneyController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Aggiorna un Journey esistente
+    // Aggiorna un itinerario esistente
     @PutMapping("/{id}")
     public ResponseEntity<?> updateJourney(@PathVariable Long id, @RequestBody Journey journeyDetails) {
         try {
             Journey updatedJourney = journeyService.updateJourney(id, journeyDetails);
             return ResponseEntity.ok(updatedJourney);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante l'aggiornamento: " + e.getMessage());
         }
     }
 
-    // Elimina un Journey per ID
+    // Elimina un itinerario
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteJourney(@PathVariable Long id) {
         try {
             journeyService.deleteJourney(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante l'eliminazione: " + e.getMessage());
         }
     }
 
-    // Approva un Journey (solo dal curatore)
+    // Approvazione di un itinerario (solo curatore)
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveJourney(@PathVariable Long id) {
         try {
             Journey approvedJourney = journeyService.approveJourney(id);
             return ResponseEntity.ok(approvedJourney);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante l'approvazione: " + e.getMessage());
         }
     }
 
-    // Rifiuta un Journey (solo dal curatore, il journey viene eliminato)
+    // Rifiuto di un itinerario (solo curatore, il viaggio viene eliminato)
     @PutMapping("/{id}/reject")
     public ResponseEntity<?> rejectJourney(@PathVariable Long id) {
         try {
             journeyService.rejectJourney(id);
-            return ResponseEntity.ok("Journey rifiutato ed eliminato");
+            return ResponseEntity.ok("Itinerario rifiutato ed eliminato.");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante il rifiuto: " + e.getMessage());
         }
     }
 }

@@ -13,7 +13,6 @@ public class ContestEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Il contenuto del contributo (testo, URL immagine, ecc.) – opzionale
     @Column(length = 2048)
     private String contenuto;
 
@@ -22,13 +21,11 @@ public class ContestEntry {
     @Enumerated(EnumType.STRING)
     private StatoPartecipazione stato = StatoPartecipazione.IN_ATTESA;
 
-    // Il concorso a cui appartiene l'entry
     @ManyToOne
     @JoinColumn(name = "concorso_id")
     @JsonBackReference
     private Contest concorso;
 
-    // L'utente che ha inviato il contributo
     @ManyToOne
     @JoinColumn(name = "partecipante_id")
     private Users partecipante;
@@ -42,7 +39,6 @@ public class ContestEntry {
         this.stato = StatoPartecipazione.IN_ATTESA;
     }
 
-    // Getters e Setters
     public Long getId() { return id; }
     public String getContenuto() { return contenuto; }
     public void setContenuto(String contenuto) { this.contenuto = contenuto; }

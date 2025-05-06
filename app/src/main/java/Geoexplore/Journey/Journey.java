@@ -25,13 +25,9 @@ public class Journey {
     @JsonIgnoreProperties("journeys")
     private Users creator;
 
-    // Stato di conferma (approvazione)
     private boolean confermato = false;
-
-    // Indica se il journey è ordinato (true) o non ordinato (false)
     private boolean ordinato;
 
-    // Lista dei POI associati – utilizziamo FetchType.EAGER per caricare tutti i dati dei POI
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "journey_poi",
@@ -41,11 +37,9 @@ public class Journey {
     @OrderColumn(name = "sequence")
     private List<POI> poiList;
 
-    // Costruttore vuoto richiesto da JPA
     public Journey() {
     }
 
-    // Costruttore con parametri (senza poiList e ordinato, da impostare separatamente)
     public Journey(String nome, String descrizione, Users creator) {
         this.nome = nome;
         this.descrizione = descrizione;
@@ -53,7 +47,6 @@ public class Journey {
         this.confermato = false;
     }
 
-    // Getters e Setters
     public Long getId() {
         return id;
     }

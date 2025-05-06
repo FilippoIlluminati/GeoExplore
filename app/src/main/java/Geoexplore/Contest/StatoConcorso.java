@@ -1,7 +1,8 @@
 package Geoexplore.Contest;
 
+// Stato attuale del concorso
 public enum StatoConcorso {
-    BOZZA,
-    IN_CORSO,
-    CHIUSO
+    BOZZA,      // In fase di creazione
+    IN_CORSO,   // Attivo e visibile
+    CHIUSO      // Terminato
 }

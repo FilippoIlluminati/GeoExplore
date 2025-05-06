@@ -16,12 +16,14 @@ public class POIController {
     @Autowired
     private POIService poiService;
 
+    // Restituisce l'elenco completo dei POI
     @GetMapping
     public ResponseEntity<List<POI>> getAllPOIs() {
         List<POI> pois = poiService.getAllPOIs();
         return ResponseEntity.ok(pois);
     }
 
+    // Restituisce un POI specifico tramite ID
     @GetMapping("/{id}")
     public ResponseEntity<POI> getPOIById(@PathVariable Long id) {
         Optional<POI> poiOpt = poiService.getPOIById(id);
@@ -29,31 +31,29 @@ public class POIController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Endpoint per la creazione del POI
+    // Crea un nuovo POI (accesso riservato a utenti autenticati autorizzati)
     @PostMapping
     public ResponseEntity<?> createPOI(@RequestBody POI poi) {
         try {
             POI createdPOI = poiService.createPOI(poi);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdPOI);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante la creazione del POI: " + e.getMessage());
         }
     }
 
-    // Endpoint per l'aggiornamento del POI
-    // (Solo il creatore del POI può modificarlo)
+    // Aggiorna un POI esistente (solo il creatore può modificarlo)
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePOI(@PathVariable Long id, @RequestBody POI poi) {
         try {
             POI updatedPOI = poiService.updatePOI(id, poi);
             return ResponseEntity.ok(updatedPOI);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante l'aggiornamento del POI: " + e.getMessage());
         }
     }
 
-    // Endpoint per l'eliminazione del POI
-    // (Solo il creatore del POI può eliminarlo)
+    // Elimina un POI esistente (solo il creatore può eliminarlo)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePOI(@PathVariable Long id) {
         try {
@@ -64,7 +64,7 @@ public class POIController {
         }
     }
 
-    // Endpoint per l'approvazione del POI (solo il curatore può approvare)
+    // Approvazione di un POI (accesso riservato al Curatore)
     @PutMapping("/{id}/approve")
     public ResponseEntity<POI> approvePOI(@PathVariable Long id) {
         try {
@@ -75,26 +75,25 @@ public class POIController {
         }
     }
 
-    // Nuovo endpoint per il rifiuto del POI (solo il curatore può rifiutare)
-    // In caso di rifiuto il POI viene eliminato
+    // Rifiuto di un POI (accesso riservato al Curatore, comporta l'eliminazione)
     @PutMapping("/{id}/reject")
     public ResponseEntity<?> rejectPOI(@PathVariable Long id) {
         try {
             poiService.rejectPOI(id);
-            return ResponseEntity.ok("POI rifiutato ed eliminato");
+            return ResponseEntity.ok("POI rifiutato ed eliminato.");
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante il rifiuto del POI: " + e.getMessage());
         }
     }
 
-    // Nuovo endpoint: recupera la lista dei POI salvati dall'utente autenticato
+    // Restituisce i POI salvati dall’utente autenticato (Turista)
     @GetMapping("/saved")
     public ResponseEntity<?> getSavedPOIs() {
         try {
             Set<POI> savedPois = poiService.getSavedPOIsForTurista();
             return ResponseEntity.ok(savedPois);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body("Errore durante il recupero dei POI salvati: " + e.getMessage());
         }
     }
- }
+}

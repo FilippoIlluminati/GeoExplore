@@ -22,80 +22,79 @@ public class JourneyManager {
         this.userRepository = userRepository;
     }
 
-    // Helper per ottenere l'utente autenticato
-    private Users getAuthenticatedUser(){
+    private Users getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
         Users user = userRepository.findByUsername(username);
-        if(user == null) {
+        if (user == null) {
             throw new RuntimeException("Utente non autenticato");
         }
         return user;
     }
 
-    // Salva un nuovo journey
     public Journey saveJourney(Journey journey) {
-        // Verifica che il journey contenga almeno 2 POI
-        if(journey.getPoiList() == null || journey.getPoiList().size() < 2) {
+        if (journey.getPoiList() == null || journey.getPoiList().size() < 2) {
             throw new RuntimeException("Un journey deve contenere almeno 2 POI");
         }
-        // Verifica il creatore
-        if(journey.getCreator() == null || journey.getCreator().getId() == null) {
+
+        if (journey.getCreator() == null || journey.getCreator().getId() == null) {
             throw new RuntimeException("Creator non specificato");
         }
+
         Optional<Users> optionalCreator = userRepository.findById(journey.getCreator().getId());
-        if(optionalCreator.isEmpty()){
+        if (optionalCreator.isEmpty()) {
             throw new RuntimeException("Creator non trovato");
         }
+
         Users creator = optionalCreator.get();
         journey.setCreator(creator);
-        // Solo CONTRIBUTOR e CONTRIBUTOR_AUTORIZZATO possono creare un journey
-        if(creator.getRuolo() != UserRole.CONTRIBUTOR && creator.getRuolo() != UserRole.CONTRIBUTOR_AUTORIZZATO){
+
+        if (creator.getRuolo() != UserRole.CONTRIBUTOR && creator.getRuolo() != UserRole.CONTRIBUTOR_AUTORIZZATO) {
             throw new RuntimeException("Solo i contributor possono creare un journey");
         }
-        // Imposta lo stato di conferma in base al ruolo:
-        // Se il creatore è CONTRIBUTOR_AUTORIZZATO, il journey viene approvato automaticamente;
-        // Se è CONTRIBUTOR, resta in attesa di approvazione.
-        if(creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO) {
+
+        if (creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO) {
             journey.setConfermato(true);
         } else {
             journey.setConfermato(false);
         }
+
         return journeyRepository.save(journey);
     }
 
-    public List<Journey> getAllJourneys(){
+    public List<Journey> getAllJourneys() {
         return journeyRepository.findAll();
     }
 
-    public Optional<Journey> getJourneyById(Long id){
+    public Optional<Journey> getJourneyById(Long id) {
         return journeyRepository.findById(id);
     }
 
-    // Elimina un journey (solo il creatore può eliminarlo)
     public void deleteJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
-        if(optionalJourney.isEmpty()){
+        if (optionalJourney.isEmpty()) {
             throw new RuntimeException("Journey non trovato");
         }
+
         Journey journey = optionalJourney.get();
-        if(!journey.getCreator().getId().equals(currentUser.getId())){
+        if (!journey.getCreator().getId().equals(currentUser.getId())) {
             throw new RuntimeException("Solo il creatore del journey può eliminarlo");
         }
+
         journeyRepository.deleteById(id);
     }
 
-    // Aggiorna un journey esistente (solo il creatore può modificarlo e solo se non è già approvato)
     public Journey updateJourney(Long id, Journey journeyDetails) {
         Users currentUser = getAuthenticatedUser();
         return journeyRepository.findById(id).map(journey -> {
-            if(!journey.getCreator().getId().equals(currentUser.getId())){
+            if (!journey.getCreator().getId().equals(currentUser.getId())) {
                 throw new RuntimeException("Solo il creatore del journey può modificarlo");
             }
-            if(journey.isConfermato()){
+            if (journey.isConfermato()) {
                 throw new RuntimeException("Il journey già approvato non può essere modificato");
             }
+
             journey.setNome(journeyDetails.getNome());
             journey.setDescrizione(journeyDetails.getDescrizione());
             journey.setOrdinato(journeyDetails.isOrdinato());
@@ -104,14 +103,14 @@ public class JourneyManager {
         }).orElseThrow(() -> new RuntimeException("Journey non trovato con id: " + id));
     }
 
-    // Approvazione del journey: solo il curatore può approvare
     public Journey approveJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
-        if(currentUser.getRuolo() != UserRole.CURATORE) {
+        if (currentUser.getRuolo() != UserRole.CURATORE) {
             throw new RuntimeException("Solo il curatore può approvare i journey");
         }
+
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
-        if(optionalJourney.isPresent()){
+        if (optionalJourney.isPresent()) {
             Journey journey = optionalJourney.get();
             journey.setConfermato(true);
             return journeyRepository.save(journey);
@@ -120,16 +119,17 @@ public class JourneyManager {
         }
     }
 
-    // Rifiuto del journey: solo il curatore può rifiutare; in questo caso il journey viene eliminato
     public void rejectJourney(Long id) {
         Users currentUser = getAuthenticatedUser();
-        if(currentUser.getRuolo() != UserRole.CURATORE) {
+        if (currentUser.getRuolo() != UserRole.CURATORE) {
             throw new RuntimeException("Solo il curatore può rifiutare i journey");
         }
+
         Optional<Journey> optionalJourney = journeyRepository.findById(id);
-        if(optionalJourney.isEmpty()){
+        if (optionalJourney.isEmpty()) {
             throw new RuntimeException("Journey non trovato con id " + id);
         }
+
         journeyRepository.deleteById(id);
     }
 }

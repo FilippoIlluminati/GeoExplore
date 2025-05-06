@@ -22,12 +22,13 @@ public class ContestController {
     @Autowired private ContestService contestService;
     @Autowired private UserRepository userRepository;
 
+    // Crea un nuovo concorso (solo Animatore)
     @PostMapping("/create")
     public ResponseEntity<?> creaConcorso(@RequestBody Contest concorso,
                                           @RequestParam Long creatoreId) {
         try {
             Contest saved = contestService.creaConcorso(concorso, creatoreId);
-            return ResponseEntity.ok("Concorso creato. ID: " + saved.getId());
+            return ResponseEntity.ok("Concorso creato con successo. ID: " + saved.getId());
         } catch (SecurityException ex) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
         } catch (RuntimeException ex) {
@@ -35,10 +36,11 @@ public class ContestController {
         }
     }
 
+    // Partecipa a un concorso
     @PostMapping("/{concorsoId}/join")
     public ResponseEntity<?> partecipa(@PathVariable Long concorsoId,
                                        @RequestParam Long partecipanteId,
-                                       @RequestBody(required=false) ContestEntry participation) {
+                                       @RequestBody(required = false) ContestEntry participation) {
         try {
             ContestEntry saved = contestService.partecipaAlConcorso(
                     concorsoId, participation, partecipanteId);
@@ -50,20 +52,14 @@ public class ContestController {
         }
     }
 
-    /**
-     * Submit or update the contest entry content.
-     * Now mapped to /contest/partecipazione/{parteId}/contenuto
-     * so you can call:
-     *   PUT http://localhost:8080/contest/partecipazione/{entryId}/contenuto?partecipanteId=...
-     */
+    // Invia o aggiorna il contenuto di una partecipazione
     @PutMapping("/partecipazione/{parteId}/contenuto")
     public ResponseEntity<?> submitContent(@PathVariable Long parteId,
                                            @RequestParam Long partecipanteId,
-                                           @RequestBody Map<String,String> body) {
+                                           @RequestBody Map<String, String> body) {
         try {
             String contenuto = body.get("contenuto");
-            ContestEntry updated = contestService.submitContent(
-                    parteId, contenuto, partecipanteId);
+            ContestEntry updated = contestService.submitContent(parteId, contenuto, partecipanteId);
             return ResponseEntity.ok("Contenuto inviato. ID partecipazione: " + updated.getId());
         } catch (SecurityException ex) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
@@ -72,6 +68,7 @@ public class ContestController {
         }
     }
 
+    // Approvazione di una partecipazione (Animatore o Curatore)
     @PatchMapping("/partecipazione/{parteId}/approva")
     public ResponseEntity<?> approva(@PathVariable Long parteId,
                                      @RequestParam Long validatoreId) {
@@ -87,6 +84,7 @@ public class ContestController {
         }
     }
 
+    // Rifiuto di una partecipazione (Animatore o Curatore)
     @PatchMapping("/partecipazione/{parteId}/rifiuta")
     public ResponseEntity<?> rifiuta(@PathVariable Long parteId,
                                      @RequestParam Long validatoreId) {
@@ -102,16 +100,19 @@ public class ContestController {
         }
     }
 
+    // Restituisce tutte le partecipazioni a un concorso
     @GetMapping("/{concorsoId}/partecipazioni")
     public ResponseEntity<?> listPartecipazioni(@PathVariable Long concorsoId) {
         return ResponseEntity.ok(contestService.getPartecipazioniPerConcorso(concorsoId));
     }
 
+    // Restituisce l'elenco di tutti i concorsi
     @GetMapping("/all")
     public ResponseEntity<?> getAll() {
         return ResponseEntity.ok(contestService.getAllConcorsi());
     }
 
+    // Restituisce concorsi filtrati per stato
     @GetMapping("/status")
     public ResponseEntity<?> byStatus(@RequestParam String stato) {
         try {
@@ -122,6 +123,7 @@ public class ContestController {
         }
     }
 
+    // Restituisce un concorso specifico per ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getOne(@PathVariable Long id) {
         try {
@@ -131,6 +133,7 @@ public class ContestController {
         }
     }
 
+    // Restituisce tutte le partecipazioni ai concorsi creati da un animatore specifico
     @GetMapping("/animator/{animId}/partecipazioni")
     public ResponseEntity<?> byAnimator(@PathVariable Long animId) {
         return ResponseEntity.ok(contestService.getPartecipazioniPerAnimatore(animId));

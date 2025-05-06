@@ -19,7 +19,6 @@ public class Users {
     private String email;
     private String username;
 
-    // Permette la deserializzazione della password senza mostrarla nelle risposte
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
@@ -29,7 +28,6 @@ public class Users {
     @Enumerated(EnumType.STRING)
     private AccountStatus accountStatus = AccountStatus.IN_ATTESA;
 
-    // Relazione ManyToMany per i POI salvati (per visite future)
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "saved_pois",
@@ -38,10 +36,8 @@ public class Users {
     )
     private Set<POI> savedPois = new HashSet<>();
 
-    // Costruttore vuoto (necessario per JPA)
     public Users() {}
 
-    // Costruttore senza AccountStatus
     public Users(String nome, String cognome, String email, String username, String password, UserRole ruolo) {
         this.nome = nome;
         this.cognome = cognome;
@@ -49,14 +45,9 @@ public class Users {
         this.username = username;
         this.password = password;
         this.ruolo = ruolo;
-        if (ruolo == UserRole.CONTRIBUTOR) {
-            this.accountStatus = AccountStatus.IN_ATTESA;
-        } else {
-            this.accountStatus = AccountStatus.ATTIVO;
-        }
+        this.accountStatus = (ruolo == UserRole.CONTRIBUTOR) ? AccountStatus.IN_ATTESA : AccountStatus.ATTIVO;
     }
 
-    // Costruttore con AccountStatus
     public Users(String nome, String cognome, String email, String username, String password, UserRole ruolo, AccountStatus accountStatus) {
         this.nome = nome;
         this.cognome = cognome;
@@ -67,7 +58,6 @@ public class Users {
         this.accountStatus = accountStatus;
     }
 
-    // Getters e Setters
     public Long getId() { return id; }
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
@@ -84,12 +74,6 @@ public class Users {
     public AccountStatus getAccountStatus() { return accountStatus; }
     public void setAccountStatus(AccountStatus accountStatus) { this.accountStatus = accountStatus; }
 
-    // Getters e Setters per i POI salvati
-    public Set<POI> getSavedPois() {
-        return savedPois;
-    }
-
-    public void setSavedPois(Set<POI> savedPois) {
-        this.savedPois = savedPois;
-    }
+    public Set<POI> getSavedPois() { return savedPois; }
+    public void setSavedPois(Set<POI> savedPois) { this.savedPois = savedPois; }
 }

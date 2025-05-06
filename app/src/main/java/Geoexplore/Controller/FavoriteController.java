@@ -23,31 +23,28 @@ public class FavoriteController {
     @Autowired
     private POIRepository poiRepository;
 
-    // Aggiunge un POI alla lista dei preferiti dell'utente autenticato
+    // Aggiunge un POI ai preferiti dell’utente autenticato
     @PostMapping("/{poiId}")
     public ResponseEntity<?> addFavorite(@PathVariable Long poiId, Authentication authentication) {
-        // Recupera il nome utente dall'Authentication
         String username = authentication.getName();
         Users user = userRepository.findByUsername(username);
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utente non trovato.");
         }
 
-        // Verifica l'esistenza del POI
         Optional<POI> poiOpt = poiRepository.findById(poiId);
         if (!poiOpt.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("POI not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("POI non trovato.");
         }
-        POI poi = poiOpt.get();
 
-        // Aggiunge il POI ai preferiti
+        POI poi = poiOpt.get();
         user.getSavedPois().add(poi);
         userRepository.save(user);
 
-        return ResponseEntity.ok("POI added to favorites");
+        return ResponseEntity.ok("POI aggiunto ai preferiti.");
     }
 
-    // Recupera la lista dei POI salvati come preferiti dell'utente autenticato
+    // Restituisce i POI salvati tra i preferiti dall’utente autenticato
     @GetMapping
     public ResponseEntity<Set<POI>> getFavorites(Authentication authentication) {
         String username = authentication.getName();
@@ -55,6 +52,7 @@ public class FavoriteController {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+
         Set<POI> favorites = user.getSavedPois();
         return ResponseEntity.ok(favorites);
     }

@@ -16,33 +16,33 @@ public class Contest {
 
     private String titolo;
     private String descrizione;
-
     private LocalDateTime dataInizio;
     private LocalDateTime dataFine;
 
     @Enumerated(EnumType.STRING)
     private StatoConcorso stato = StatoConcorso.BOZZA;
 
-    // Flag per indicare se il concorso è su invito
+    // Indica se il concorso è a invito
     private boolean invitazionale = false;
 
-    // Lista degli ID degli utenti invitati (opzionale)
+    // Elenco degli ID utenti invitati (se presente)
     @ElementCollection
     private List<Long> invitedUserIds;
 
-    // L'animatore (creatore) che ha creato il concorso
+    // Creatore del concorso (utente con ruolo ANIMATORE)
     @ManyToOne
     @JoinColumn(name = "creator_id")
     private Users creatore;
 
-    // Relazione per le partecipazioni (fetch EAGER per includerle nella risposta JSON)
+    // Partecipazioni al concorso
     @OneToMany(mappedBy = "concorso", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonManagedReference
     private List<ContestEntry> partecipazioni;
 
     public Contest() {}
 
-    public Contest(String titolo, String descrizione, LocalDateTime dataInizio, LocalDateTime dataFine, boolean invitazionale, List<Long> invitedUserIds, Users creatore) {
+    public Contest(String titolo, String descrizione, LocalDateTime dataInizio, LocalDateTime dataFine,
+                   boolean invitazionale, List<Long> invitedUserIds, Users creatore) {
         this.titolo = titolo;
         this.descrizione = descrizione;
         this.dataInizio = dataInizio;

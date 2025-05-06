@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notifications") // Nome tabella al plurale per standard SQL
+@Table(name = "notifications")
 public class Notification {
 
     @Id
@@ -23,15 +23,15 @@ public class Notification {
     @Column(nullable = false)
     private NotificationStatus stato;
 
-    @Column(nullable = false, updatable = false) // Data di creazione
+    @Column(nullable = false, updatable = false)
     private LocalDateTime dataCreazione;
 
     // Costruttore vuoto richiesto da JPA
     public Notification() {
-        this.dataCreazione = LocalDateTime.now(); // Imposta automaticamente la data
+        this.dataCreazione = LocalDateTime.now();
     }
 
-    // Costruttore con parametri
+    // Costruttore completo
     public Notification(Users utente, String testo, NotificationStatus stato) {
         this.utente = utente;
         this.testo = testo;
@@ -39,7 +39,6 @@ public class Notification {
         this.dataCreazione = LocalDateTime.now();
     }
 
-    // Getter e Setter
     public Long getId() {
         return id;
     }

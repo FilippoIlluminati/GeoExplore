@@ -1,8 +1,8 @@
 package Geoexplore.POI;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import Geoexplore.User.Users;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import Geoexplore.User.Users;
 import jakarta.persistence.*;
 
 @Entity
@@ -26,7 +26,6 @@ public class POI {
 
     private String comune;
 
-    // Ignora la serializzazione del creatore in POI per evitare la ricorsione
     @ManyToOne
     @JoinColumn(name = "creator_id")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -37,7 +36,7 @@ public class POI {
     // Costruttore vuoto richiesto da JPA
     public POI() {}
 
-    // Costruttore con parametri
+    // Costruttore completo
     public POI(String nome, String descrizione, double latitude, double longitude, Category categoria, String comune, Users creator, boolean approvato) {
         this.nome = nome;
         this.descrizione = descrizione;

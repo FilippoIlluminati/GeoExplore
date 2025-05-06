@@ -8,9 +8,9 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    // Recupera tutte le notifiche di un utente specifico
+    // Restituisce tutte le notifiche per uno specifico utente
     List<Notification> findByUtenteId(Long utenteId);
 
-    // Recupera solo le notifiche NON LETTE di un utente specifico
+    // Restituisce solo le notifiche non lette per uno specifico utente
     List<Notification> findByUtenteIdAndStato(Long utenteId, NotificationStatus stato);
 }

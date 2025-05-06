@@ -12,17 +12,17 @@ public class NotificationService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    // Ottiene tutte le notifiche
+    // Restituisce tutte le notifiche presenti nel sistema
     public List<Notification> getAllNotifications() {
         return notificationRepository.findAll();
     }
 
-    // Trova una notifica per ID
+    // Restituisce una notifica specifica per ID
     public Optional<Notification> getNotificationById(Long id) {
         return notificationRepository.findById(id);
     }
 
-    // Salva una nuova notifica
+    // Crea e salva una nuova notifica
     public Notification createNotification(Notification notification) {
         return notificationRepository.save(notification);
     }
@@ -34,31 +34,29 @@ public class NotificationService {
             notification.setTesto(notificationDetails.getTesto());
             notification.setStato(notificationDetails.getStato());
             return notificationRepository.save(notification);
-        }).orElseThrow(() -> new RuntimeException("Notification not found"));
+        }).orElseThrow(() -> new RuntimeException("Notifica non trovata"));
     }
 
-    // Elimina una notifica
+    // Elimina una notifica specifica
     public void deleteNotification(Long id) {
         notificationRepository.deleteById(id);
     }
 
-    // **NUOVI METODI AGGIUNTI**
-
-    // Recupera tutte le notifiche di un utente specifico
+    // Restituisce tutte le notifiche associate a un utente
     public List<Notification> getNotificationsByUser(Long userId) {
         return notificationRepository.findByUtenteId(userId);
     }
 
-    // Recupera solo le notifiche NON LETTE di un utente specifico
+    // Restituisce solo le notifiche non lette associate a un utente
     public List<Notification> getUnreadNotificationsByUser(Long userId) {
         return notificationRepository.findByUtenteIdAndStato(userId, NotificationStatus.NON_LETTA);
     }
 
-    // Marca una notifica come letta
+    // Marca come letta una notifica specifica
     public Notification markNotificationAsRead(Long id) {
         return notificationRepository.findById(id).map(notification -> {
             notification.setStato(NotificationStatus.LETTA);
             return notificationRepository.save(notification);
-        }).orElseThrow(() -> new RuntimeException("Notification not found"));
+        }).orElseThrow(() -> new RuntimeException("Notifica non trovata"));
     }
 }

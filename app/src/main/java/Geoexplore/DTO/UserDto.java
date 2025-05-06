@@ -6,16 +6,18 @@ public class UserDto {
     private String cognome;
     private String email;
 
+    // Costruttore vuoto
     public UserDto() {
     }
 
+    // Costruttore completo
     public UserDto(String nome, String cognome, String email) {
         this.nome = nome;
         this.cognome = cognome;
         this.email = email;
     }
 
-    // Getters e Setters
+    // Getter e Setter per 'nome'
     public String getNome() {
         return nome;
     }
@@ -24,6 +26,7 @@ public class UserDto {
         this.nome = nome;
     }
 
+    // Getter e Setter per 'cognome'
     public String getCognome() {
         return cognome;
     }
@@ -32,6 +35,7 @@ public class UserDto {
         this.cognome = cognome;
     }
 
+    // Getter e Setter per 'email'
     public String getEmail() {
         return email;
     }

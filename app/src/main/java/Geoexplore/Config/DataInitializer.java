@@ -8,10 +8,7 @@ import Geoexplore.POI.POI;
 import Geoexplore.POI.POIRepository;
 import Geoexplore.Journey.Journey;
 import Geoexplore.Journey.JourneyRepository;
-import Geoexplore.Content.Content;
 import Geoexplore.Content.ContentRepository;
-import Geoexplore.Content.ContentType;
-import Geoexplore.Content.ContentStatus;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +25,8 @@ public class DataInitializer {
                                           JourneyRepository journeyRepository,
                                           ContentRepository contentRepository) {
         return args -> {
-            // Gestore
+
+            // Inizializzazione del gestore della piattaforma
             Users gestore = userRepository.findByUsername("gestore");
             if (gestore == null) {
                 gestore = new Users(
@@ -43,7 +41,7 @@ public class DataInitializer {
                 userRepository.save(gestore);
             }
 
-            // POI di esempio
+            // Creazione di un POI
             POI poi = poiRepository.findByNome("Piazza del Duomo");
             if (poi == null) {
                 poi = new POI();
@@ -58,7 +56,7 @@ public class DataInitializer {
                 poiRepository.save(poi);
             }
 
-            // Journey di esempio
+            // Creazione di un itinerario
             Journey journey = journeyRepository.findByNome("Itinerario Storico");
             if (journey == null) {
                 journey = new Journey();
@@ -69,7 +67,6 @@ public class DataInitializer {
                 journey.setPoiList(List.of(poi));
                 journeyRepository.save(journey);
             }
-
         };
     }
 }

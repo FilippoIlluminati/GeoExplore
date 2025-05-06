@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface JourneyRepository extends JpaRepository<Journey, Long> {
-    // Aggiunto il metodo per cercare un Journey in base al nome
+
+    // Restituisce un journey dato il nome esatto
     Journey findByNome(String nome);
 }

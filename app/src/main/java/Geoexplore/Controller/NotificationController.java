@@ -27,14 +27,14 @@ public class NotificationController {
         return ResponseEntity.ok(savedNotification);
     }
 
-    // Recupera tutte le notifiche
+    // Restituisce tutte le notifiche
     @GetMapping
     public ResponseEntity<List<Notification>> getAllNotifications() {
         List<Notification> notifications = notificationService.getAllNotifications();
         return ResponseEntity.ok(notifications);
     }
 
-    // Recupera una notifica per ID
+    // Restituisce una notifica specifica per ID
     @GetMapping("/{id}")
     public ResponseEntity<Notification> getNotificationById(@PathVariable Long id) {
         Optional<Notification> notification = notificationService.getNotificationById(id);
@@ -42,25 +42,25 @@ public class NotificationController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Elimina una notifica per ID
+    // Elimina una notifica specifica per ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotification(@PathVariable Long id) {
         if (notificationService.getNotificationById(id).isPresent()) {
             notificationService.deleteNotification(id);
             return ResponseEntity.noContent().build(); // 204 No Content
         } else {
-            return ResponseEntity.notFound().build(); // 404 Not Found
+            return ResponseEntity.notFound().build();  // 404 Not Found
         }
     }
 
-    // Recupera tutte le notifiche di un utente specifico
+    // Restituisce tutte le notifiche associate a un utente specifico
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Notification>> getNotificationsByUser(@PathVariable Long userId) {
         List<Notification> notifications = notificationService.getNotificationsByUser(userId);
         return ResponseEntity.ok(notifications);
     }
 
-    // Recupera solo le notifiche NON LETTE di un utente specifico
+    // Restituisce solo le notifiche NON lette di un utente specifico
     @GetMapping("/user/{userId}/unread")
     public ResponseEntity<List<Notification>> getUnreadNotificationsByUser(@PathVariable Long userId) {
         List<Notification> notifications = notificationService.getUnreadNotificationsByUser(userId);

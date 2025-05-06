@@ -18,68 +18,60 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    // ——————————————————————————————————————————
-    //  Endpoints esistenti (creazione, approvazione, get all)
-    // ——————————————————————————————————————————
-
+    // Crea un nuovo utente (solo il Gestore può farlo)
     @PostMapping("/create-user")
     public ResponseEntity<?> createUserByGestore(
             @RequestBody Users user,
             @RequestParam Long requesterId) {
 
         Users requester = userService.getUserById(requesterId)
-                .orElseThrow(() -> new SecurityException("Requester non trovato"));
+                .orElseThrow(() -> new SecurityException("Richiedente non trovato."));
 
         Users createdUser = userService.createUserByGestore(user, requester);
-        return ResponseEntity.ok("Utente creato con successo: " + createdUser.getUsername());
+        return ResponseEntity.ok("Utente creato correttamente: " + createdUser.getUsername());
     }
 
+    // Approvazione di un contributor da parte del Gestore
     @PatchMapping("/approve-contributor/{id}")
     public ResponseEntity<?> approveContributorByGestore(
             @PathVariable Long id,
             @RequestParam Long requesterId) {
 
         Users requester = userService.getUserById(requesterId)
-                .orElseThrow(() -> new SecurityException("Requester non trovato"));
+                .orElseThrow(() -> new SecurityException("Richiedente non trovato."));
 
         Users approvedUser = userService.approveContributorByGestore(id, requester);
         return ResponseEntity.ok("Contributor approvato: " + approvedUser.getUsername());
     }
 
+    // Restituisce l'elenco completo degli utenti
     @GetMapping("/all")
     public ResponseEntity<?> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    // ——————————————————————————————————————————
-    //  NUOVO: Eliminazione di un utente da parte del Gestore
-    //  DELETE /users/{id}?managerId=...
-    // ——————————————————————————————————————————
+    // Elimina un utente (solo il Gestore può farlo, non può eliminare se stesso)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUserByGestore(
             @PathVariable Long id,
             @RequestParam Long managerId) {
 
         Users manager = userRepository.findById(managerId)
-                .orElseThrow(() -> new RuntimeException("Manager non trovato"));
+                .orElseThrow(() -> new RuntimeException("Gestore non trovato."));
 
         if (manager.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
-            return ResponseEntity.status(403).body("Solo il Gestore della piattaforma può eliminare utenti.");
+            return ResponseEntity.status(403).body("Accesso negato: solo il Gestore può eliminare utenti.");
         }
 
-        // Protezione: il gestore non può eliminare se stesso
         if (manager.getId().equals(id)) {
-            return ResponseEntity.badRequest().body("Il Gestore non può eliminarsi da solo.");
+            return ResponseEntity.badRequest().body("Operazione non consentita: il Gestore non può eliminare se stesso.");
         }
 
-        // Verifico che l'utente esista
         if (userService.getUserById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        // Eliminazione effettiva
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
-
 }
