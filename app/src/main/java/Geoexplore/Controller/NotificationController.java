@@ -2,9 +2,13 @@ package Geoexplore.Controller;
 
 import Geoexplore.Notification.Notification;
 import Geoexplore.Notification.NotificationService;
+import Geoexplore.User.UserRepository;
+import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +18,7 @@ import java.util.Optional;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    @Autowired private UserRepository userRepository;
 
     @Autowired
     public NotificationController(NotificationService notificationService) {
@@ -47,23 +52,29 @@ public class NotificationController {
     public ResponseEntity<Void> deleteNotification(@PathVariable Long id) {
         if (notificationService.getNotificationById(id).isPresent()) {
             notificationService.deleteNotification(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
+            return ResponseEntity.noContent().build();
         } else {
-            return ResponseEntity.notFound().build();  // 404 Not Found
+            return ResponseEntity.notFound().build();
         }
     }
 
-    // Restituisce tutte le notifiche associate a un utente specifico
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Notification>> getNotificationsByUser(@PathVariable Long userId) {
-        List<Notification> notifications = notificationService.getNotificationsByUser(userId);
+    // Restituisce le notifiche dell’utente autenticato
+    @GetMapping("/user")
+    public ResponseEntity<List<Notification>> getNotificationsByUser(
+            @AuthenticationPrincipal UserDetails principal) {
+
+        Users user = userRepository.findByUsername(principal.getUsername());
+        List<Notification> notifications = notificationService.getNotificationsByUser(user.getId());
         return ResponseEntity.ok(notifications);
     }
 
-    // Restituisce solo le notifiche NON lette di un utente specifico
-    @GetMapping("/user/{userId}/unread")
-    public ResponseEntity<List<Notification>> getUnreadNotificationsByUser(@PathVariable Long userId) {
-        List<Notification> notifications = notificationService.getUnreadNotificationsByUser(userId);
+    // Restituisce solo le notifiche NON lette dell’utente autenticato
+    @GetMapping("/user/unread")
+    public ResponseEntity<List<Notification>> getUnreadNotificationsByUser(
+            @AuthenticationPrincipal UserDetails principal) {
+
+        Users user = userRepository.findByUsername(principal.getUsername());
+        List<Notification> notifications = notificationService.getUnreadNotificationsByUser(user.getId());
         return ResponseEntity.ok(notifications);
     }
 

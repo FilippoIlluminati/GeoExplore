@@ -1,77 +1,65 @@
 package Geoexplore.Controller;
 
-import Geoexplore.User.UserRole;
 import Geoexplore.User.UserService;
 import Geoexplore.User.Users;
+import Geoexplore.User.UserRole;
 import Geoexplore.User.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    @Autowired private UserService    userService;
+    @Autowired private UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    // Crea un nuovo utente (solo il Gestore può farlo)
     @PostMapping("/create-user")
-    public ResponseEntity<?> createUserByGestore(
+    public ResponseEntity<String> createUserByGestore(
             @RequestBody Users user,
-            @RequestParam Long requesterId) {
+            @AuthenticationPrincipal UserDetails principal) {
 
-        Users requester = userService.getUserById(requesterId)
-                .orElseThrow(() -> new SecurityException("Richiedente non trovato."));
-
-        Users createdUser = userService.createUserByGestore(user, requester);
-        return ResponseEntity.ok("Utente creato correttamente: " + createdUser.getUsername());
+        Users mgr = userRepository.findByUsername(principal.getUsername());
+        if (mgr == null || mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            return ResponseEntity.status(403).body("Accesso negato");
+        }
+        Users created = userService.createUserByGestore(user, mgr);
+        return ResponseEntity.ok("Utente creato: " + created.getUsername());
     }
 
-    // Approvazione di un contributor da parte del Gestore
     @PatchMapping("/approve-contributor/{id}")
-    public ResponseEntity<?> approveContributorByGestore(
+    public ResponseEntity<String> approveContributor(
             @PathVariable Long id,
-            @RequestParam Long requesterId) {
+            @AuthenticationPrincipal UserDetails principal) {
 
-        Users requester = userService.getUserById(requesterId)
-                .orElseThrow(() -> new SecurityException("Richiedente non trovato."));
-
-        Users approvedUser = userService.approveContributorByGestore(id, requester);
-        return ResponseEntity.ok("Contributor approvato: " + approvedUser.getUsername());
+        Users mgr = userRepository.findByUsername(principal.getUsername());
+        if (mgr == null || mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
+            return ResponseEntity.status(403).body("Accesso negato");
+        }
+        Users approved = userService.approveContributorByGestore(id, mgr);
+        return ResponseEntity.ok("Contributor approvato: " + approved.getUsername());
     }
 
-    // Restituisce l'elenco completo degli utenti
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUserByGestore(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails principal) {
+
+        Users mgr = userRepository.findByUsername(principal.getUsername());
+        if (mgr == null
+                || mgr.getRuolo() != UserRole.GESTORE_PIATTAFORMA
+                || mgr.getId().equals(id)) {
+            return ResponseEntity.status(403).build();
+        }
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/all")
     public ResponseEntity<?> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
-    }
-
-    // Elimina un utente (solo il Gestore può farlo, non può eliminare se stesso)
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUserByGestore(
-            @PathVariable Long id,
-            @RequestParam Long managerId) {
-
-        Users manager = userRepository.findById(managerId)
-                .orElseThrow(() -> new RuntimeException("Gestore non trovato."));
-
-        if (manager.getRuolo() != UserRole.GESTORE_PIATTAFORMA) {
-            return ResponseEntity.status(403).body("Accesso negato: solo il Gestore può eliminare utenti.");
-        }
-
-        if (manager.getId().equals(id)) {
-            return ResponseEntity.badRequest().body("Operazione non consentita: il Gestore non può eliminare se stesso.");
-        }
-
-        if (userService.getUserById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
     }
 }

@@ -7,8 +7,9 @@ import Geoexplore.User.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Optional;
 import java.util.Set;
@@ -25,9 +26,11 @@ public class FavoriteController {
 
     // Aggiunge un POI ai preferiti dell’utente autenticato
     @PostMapping("/{poiId}")
-    public ResponseEntity<?> addFavorite(@PathVariable Long poiId, Authentication authentication) {
-        String username = authentication.getName();
-        Users user = userRepository.findByUsername(username);
+    public ResponseEntity<?> addFavorite(
+            @PathVariable Long poiId,
+            @AuthenticationPrincipal UserDetails principal) {
+
+        Users user = userRepository.findByUsername(principal.getUsername());
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utente non trovato.");
         }
@@ -46,9 +49,10 @@ public class FavoriteController {
 
     // Restituisce i POI salvati tra i preferiti dall’utente autenticato
     @GetMapping
-    public ResponseEntity<Set<POI>> getFavorites(Authentication authentication) {
-        String username = authentication.getName();
-        Users user = userRepository.findByUsername(username);
+    public ResponseEntity<Set<POI>> getFavorites(
+            @AuthenticationPrincipal UserDetails principal) {
+
+        Users user = userRepository.findByUsername(principal.getUsername());
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }

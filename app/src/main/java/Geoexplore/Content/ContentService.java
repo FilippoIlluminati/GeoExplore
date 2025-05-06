@@ -1,15 +1,16 @@
 package Geoexplore.Content;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 import Geoexplore.POI.POI;
 import Geoexplore.POI.POIRepository;
 import Geoexplore.User.UserRepository;
 import Geoexplore.User.Users;
 import Geoexplore.User.UserRole;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ContentService {
@@ -22,22 +23,18 @@ public class ContentService {
         Users creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato"));
 
+        // Ora anche CURATORE può creare contenuti
         if (!(creator.getRuolo() == UserRole.TURISTA_AUTENTICATO ||
                 creator.getRuolo() == UserRole.CONTRIBUTOR ||
-                creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO)) {
+                creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO ||
+                creator.getRuolo() == UserRole.CURATORE)) {
             throw new RuntimeException("Permessi insufficienti per creare contenuti");
         }
 
         content.setCreator(creator);
         content.setDataCreazione(LocalDateTime.now());
 
-        if (creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO &&
-                content.getContentType() != ContentType.CONTEST) {
-            content.setStatus(ContentStatus.APPROVATO);
-        } else {
-            content.setStatus(ContentStatus.IN_ATTESA);
-        }
-
+        // Associo il POI se richiesto
         if (content.getContentType() == ContentType.POI) {
             if (poiId == null) {
                 throw new IllegalArgumentException("ID del POI richiesto per contenuti di tipo POI");
@@ -47,6 +44,15 @@ public class ContentService {
             content.setPoi(poi);
         } else {
             content.setPoi(null);
+        }
+
+        // Auto-approve per CONTRIBUTOR_AUTORIZZATO e CURATORE (tranne i contest)
+        if ((creator.getRuolo() == UserRole.CONTRIBUTOR_AUTORIZZATO ||
+                creator.getRuolo() == UserRole.CURATORE)
+                && content.getContentType() != ContentType.CONTEST) {
+            content.setStatus(ContentStatus.APPROVATO);
+        } else {
+            content.setStatus(ContentStatus.IN_ATTESA);
         }
 
         return contentRepository.save(content);

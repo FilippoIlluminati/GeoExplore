@@ -29,6 +29,7 @@ public class AuthenticationController {
                     user.getRuolo() == UserRole.ANIMATORE ||
                     user.getRuolo() == UserRole.CURATORE ||
                     user.getRuolo() == UserRole.GESTORE_PIATTAFORMA) {
+
                 return ResponseEntity.badRequest().body("Non puoi auto-registrarti come " + user.getRuolo() + ".");
             }
 
@@ -38,7 +39,6 @@ public class AuthenticationController {
                 authenticationService.register(user);
                 return ResponseEntity.ok("Registrazione completata. Il tuo account è in attesa di approvazione.");
             }
-
             // Registrazione come TURISTA_AUTENTICATO: attivo immediatamente
             else if (user.getRuolo() == UserRole.TURISTA_AUTENTICATO) {
                 user.setAccountStatus(AccountStatus.ATTIVO);
@@ -53,18 +53,5 @@ public class AuthenticationController {
         }
     }
 
-    // Endpoint per il login
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam String username, @RequestParam String password) {
-        Users user = authenticationService.getUserByUsername(username);
-
-        if (user != null && user.getAccountStatus() == AccountStatus.ATTIVO) {
-            boolean isAuthenticated = authenticationService.authenticate(username, password);
-            return isAuthenticated
-                    ? ResponseEntity.ok("Accesso effettuato con successo.")
-                    : ResponseEntity.status(401).body("Credenziali non valide.");
-        } else {
-            return ResponseEntity.status(403).body("Accesso negato: account non attivo o in attesa di approvazione.");
-        }
-    }
+    // (Il login via Basic Auth HTTP non richiede endpoint: Spring Security gestirà l’autenticazione)
 }
