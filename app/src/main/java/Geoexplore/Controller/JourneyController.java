@@ -2,9 +2,16 @@ package Geoexplore.Controller;
 
 import Geoexplore.Journey.Journey;
 import Geoexplore.Journey.JourneyService;
+import Geoexplore.User.UserRepository;
+import Geoexplore.User.Users;
+import Geoexplore.User.UserRole;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -15,9 +22,19 @@ public class JourneyController {
     @Autowired
     private JourneyService journeyService;
 
-    // Crea un nuovo itinerario
+    @Autowired
+    private UserRepository userRepository;
+
+    // Crea un nuovo itinerario associato all'utente autenticato
     @PostMapping
-    public ResponseEntity<?> createJourney(@RequestBody Journey journey) {
+    public ResponseEntity<?> createJourney(
+            @RequestBody Journey journey,
+            @AuthenticationPrincipal UserDetails principal) {
+        Users creator = userRepository.findByUsername(principal.getUsername());
+        if (creator == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utente non trovato.");
+        }
+        journey.setCreator(creator);
         try {
             Journey savedJourney = journeyService.createJourney(journey);
             return ResponseEntity.ok(savedJourney);
@@ -28,22 +45,32 @@ public class JourneyController {
 
     // Restituisce tutti gli itinerari
     @GetMapping
-    public ResponseEntity<List<Journey>> getAllJourneys() {
+    public ResponseEntity<List<Journey>> getAllJourneys(
+            @AuthenticationPrincipal UserDetails principal) {
         List<Journey> journeys = journeyService.getAllJourneys();
         return ResponseEntity.ok(journeys);
     }
 
     // Restituisce un itinerario specifico per ID
     @GetMapping("/{id}")
-    public ResponseEntity<Journey> getJourneyById(@PathVariable Long id) {
+    public ResponseEntity<Journey> getJourneyById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails principal) {
         Optional<Journey> journey = journeyService.getJourneyById(id);
         return journey.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Aggiorna un itinerario esistente
+    // Aggiorna un itinerario esistente (solo creatore o ruoli specifici)
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateJourney(@PathVariable Long id, @RequestBody Journey journeyDetails) {
+    public ResponseEntity<?> updateJourney(
+            @PathVariable Long id,
+            @RequestBody Journey journeyDetails,
+            @AuthenticationPrincipal UserDetails principal) {
+        Users user = userRepository.findByUsername(principal.getUsername());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utente non trovato.");
+        }
         try {
             Journey updatedJourney = journeyService.updateJourney(id, journeyDetails);
             return ResponseEntity.ok(updatedJourney);
@@ -52,9 +79,15 @@ public class JourneyController {
         }
     }
 
-    // Elimina un itinerario
+    // Elimina un itinerario (solo creatore o ruoli specifici)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteJourney(@PathVariable Long id) {
+    public ResponseEntity<?> deleteJourney(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails principal) {
+        Users user = userRepository.findByUsername(principal.getUsername());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utente non trovato.");
+        }
         try {
             journeyService.deleteJourney(id);
             return ResponseEntity.noContent().build();
@@ -63,9 +96,15 @@ public class JourneyController {
         }
     }
 
-    // Approvazione di un itinerario (solo curatore)
+    // Approvazione di un itinerario (solo Curatore)
     @PutMapping("/{id}/approve")
-    public ResponseEntity<?> approveJourney(@PathVariable Long id) {
+    public ResponseEntity<?> approveJourney(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails principal) {
+        Users curator = userRepository.findByUsername(principal.getUsername());
+        if (curator == null || curator.getRuolo() != UserRole.CURATORE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accesso negato.");
+        }
         try {
             Journey approvedJourney = journeyService.approveJourney(id);
             return ResponseEntity.ok(approvedJourney);
@@ -74,9 +113,15 @@ public class JourneyController {
         }
     }
 
-    // Rifiuto di un itinerario (solo curatore, il viaggio viene eliminato)
+    // Rifiuto di un itinerario (solo Curatore)
     @PutMapping("/{id}/reject")
-    public ResponseEntity<?> rejectJourney(@PathVariable Long id) {
+    public ResponseEntity<?> rejectJourney(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails principal) {
+        Users curator = userRepository.findByUsername(principal.getUsername());
+        if (curator == null || curator.getRuolo() != UserRole.CURATORE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Accesso negato.");
+        }
         try {
             journeyService.rejectJourney(id);
             return ResponseEntity.ok("Itinerario rifiutato ed eliminato.");
